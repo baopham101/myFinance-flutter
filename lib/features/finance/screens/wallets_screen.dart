@@ -1,0 +1,111 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/formatters/money.dart';
+import '../../../core/widgets/app_card.dart';
+import '../data/finance_repository.dart';
+import '../data/models.dart';
+
+class WalletsScreen extends StatefulWidget {
+  const WalletsScreen({required this.repository, required this.householdId, super.key});
+  final FinanceRepository repository;
+  final String? householdId;
+  @override
+  State<WalletsScreen> createState() => _WalletsScreenState();
+}
+
+class _WalletsScreenState extends State<WalletsScreen> {
+  late Future<List<FinanceWallet>> _future;
+  @override
+  void initState() { super.initState(); _future = widget.repository.wallets(widget.householdId); }
+
+  Future<void> _edit([FinanceWallet? wallet]) async {
+    final saved = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, useSafeArea: true, builder: (_) => _WalletEditor(repository: widget.repository, householdId: widget.householdId, wallet: wallet));
+    if (saved == true && mounted) setState(() => _future = widget.repository.wallets(widget.householdId));
+  }
+
+  Future<void> _delete(FinanceWallet wallet) async {
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: const Text('Xóa ví?'), content: Text('Xóa ví “${wallet.name}”? Ví có giao dịch không thể xóa.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Xóa'))]));
+    if (confirmed != true) return;
+    try { await widget.repository.deleteWallet(wallet.id); if (mounted) setState(() => _future = widget.repository.wallets(widget.householdId)); }
+    catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString().replaceFirst('Exception: ', '')))); }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<FinanceWallet>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) return _screenError(context, snapshot.error!, () => setState(() => _future = widget.repository.wallets(widget.householdId)));
+          final wallets = snapshot.data ?? [];
+          return ListView(padding: const EdgeInsets.fromLTRB(18, 14, 18, 28), children: [
+            Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Ví của tôi', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)), Text('Tài khoản tiền mặt, ngân hàng và ví điện tử', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))])), FilledButton.icon(onPressed: () => _edit(), icon: const Icon(Icons.add_rounded), label: const Text('Thêm ví'))]),
+            const SizedBox(height: 16),
+            if (wallets.isEmpty) const AppCard(child: EmptyState(icon: Icons.account_balance_wallet_outlined, title: 'Chưa có ví', message: 'Tạo ví đầu tiên để ghi nhận số dư và giao dịch.')),
+            ...wallets.map((wallet) => Padding(padding: const EdgeInsets.only(bottom: 10), child: AppCard(child: Row(children: [
+              Container(width: 46, height: 46, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: .1), borderRadius: BorderRadius.circular(14)), child: Icon(_walletIcon(wallet.type), color: Theme.of(context).colorScheme.primary)),
+              const SizedBox(width: 13),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(wallet.name, style: const TextStyle(fontWeight: FontWeight.w700)), Text(_walletTypeLabel(wallet.type), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))])),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text(formatVnd(wallet.balance), style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)), Row(mainAxisSize: MainAxisSize.min, children: [IconButton(tooltip: 'Sửa ví', onPressed: () => _edit(wallet), icon: const Icon(Icons.edit_outlined, size: 19)), IconButton(tooltip: 'Xóa ví', onPressed: () => _delete(wallet), icon: const Icon(Icons.delete_outline_rounded, size: 19))])]),
+            ])))),
+          ]);
+        },
+      );
+}
+
+class _WalletEditor extends StatefulWidget {
+  const _WalletEditor({required this.repository, required this.householdId, this.wallet});
+  final FinanceRepository repository;
+  final String? householdId;
+  final FinanceWallet? wallet;
+  @override
+  State<_WalletEditor> createState() => _WalletEditorState();
+}
+
+class _WalletEditorState extends State<_WalletEditor> {
+  final _form = GlobalKey<FormState>();
+  late final TextEditingController _name;
+  late final TextEditingController _opening;
+  late WalletType _type;
+  bool _saving = false;
+  String? _error;
+  @override
+  void initState() { super.initState(); _name = TextEditingController(text: widget.wallet?.name ?? ''); _opening = TextEditingController(text: widget.wallet?.openingBalance.toString() ?? '0'); _type = widget.wallet?.type ?? WalletType.cash; }
+  @override
+  void dispose() { _name.dispose(); _opening.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(18, 16, 18, 22), child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(widget.wallet == null ? 'Tạo ví' : 'Sửa ví', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 16),
+          TextFormField(controller: _name, autofocus: true, maxLength: 80, decoration: const InputDecoration(labelText: 'Tên ví', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (value) => value == null || value.trim().isEmpty ? 'Nhập tên ví.' : null),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<WalletType>(value: _type, decoration: const InputDecoration(labelText: 'Loại ví'), items: WalletType.values.map((item) => DropdownMenuItem(value: item, child: Text(_walletTypeLabel(item)))).toList(), onChanged: (value) => setState(() => _type = value!)),
+          if (widget.wallet == null) ...[
+            const SizedBox(height: 12),
+            TextFormField(controller: _opening, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Số dư ban đầu (VND)', prefixIcon: Icon(Icons.payments_outlined)), validator: (value) { try { parseVnd(value ?? '', allowZero: true); return null; } on FormatException catch (error) { return error.message; } }),
+          ] else ...[
+            const SizedBox(height: 8),
+            Text('Số dư ban đầu được khóa sau khi tạo ví để giữ lịch sử nhất quán.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ],
+          if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+          const SizedBox(height: 16),
+          FilledButton(onPressed: _saving ? null : _submit, child: _saving ? const CircularProgressIndicator() : const Text('Lưu ví')),
+        ]))),
+      );
+
+  Future<void> _submit() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() { _saving = true; _error = null; });
+    try {
+      await widget.repository.saveWallet(id: widget.wallet?.id, name: _name.text.trim(), type: _type, openingBalance: widget.wallet == null ? parseVnd(_opening.text, allowZero: true) : null, householdId: widget.householdId);
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) { if (mounted) setState(() { _saving = false; _error = error.toString().replaceFirst('Exception: ', ''); }); }
+  }
+}
+
+String _walletTypeLabel(WalletType type) => switch (type) { WalletType.cash => 'Tiền mặt', WalletType.bank => 'Tài khoản ngân hàng', WalletType.card => 'Thẻ', WalletType.e_wallet => 'Ví điện tử', WalletType.savings => 'Tiết kiệm' };
+IconData _walletIcon(WalletType type) => switch (type) { WalletType.cash => Icons.payments_outlined, WalletType.bank => Icons.account_balance_outlined, WalletType.card => Icons.credit_card_rounded, WalletType.e_wallet => Icons.phone_android_rounded, WalletType.savings => Icons.savings_outlined };
+
+Widget _screenError(BuildContext context, Object error, VoidCallback retry) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [Text('Không thể tải dữ liệu', style: Theme.of(context).textTheme.titleMedium), const SizedBox(height: 8), Text(error.toString(), textAlign: TextAlign.center), TextButton(onPressed: retry, child: const Text('Thử lại'))])));
