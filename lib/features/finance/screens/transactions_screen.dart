@@ -66,29 +66,103 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Widget build(BuildContext context) => FutureBuilder<_TransactionData>(
         future: _future,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
           if (snapshot.hasError) return _error(snapshot.error!);
+
           final data = snapshot.data!;
           final query = _search.text.trim().toLowerCase();
-          final rows = data.transactions.where((item) => (_filter == null || item.type == _filter) && (query.isEmpty || '${item.description} ${item.categoryName} ${item.walletName}'.toLowerCase().contains(query))).toList();
-          return Column(children: [
-            Padding(padding: const EdgeInsets.fromLTRB(18, 12, 18, 8), child: Row(children: [
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Giao dịch', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)), Text('Thu nhập, chi tiêu và chuyển khoản', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))])),
-              FilledButton.icon(onPressed: () => _edit(data), icon: const Icon(Icons.add_rounded), label: const Text('Thêm')),
-            ])),
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: TextField(controller: _search, onChanged: (_) => setState(() {}), decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Tìm giao dịch')),
-            const SizedBox(height: 7),
-            SizedBox(height: 42, child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 18), children: [
-              _filterChip('Tất cả', null),
-              _filterChip('Chi tiêu', TransactionType.expense),
-              _filterChip('Thu nhập', TransactionType.income),
-              _filterChip('Chuyển khoản', TransactionType.transfer),
-            ])),
-            const SizedBox(height: 6),
-            Expanded(child: rows.isEmpty
-                ? const EmptyState(icon: Icons.receipt_long_outlined, title: 'Không có giao dịch', message: 'Thay đổi bộ lọc hoặc thêm giao dịch mới.')
-                : RefreshIndicator(onRefresh: () async { final request = _load(); setState(() => _future = request); await request; }, child: ListView.separated(padding: const EdgeInsets.fromLTRB(14, 6, 14, 24), itemCount: rows.length, separatorBuilder: (_, __) => const SizedBox(height: 1), itemBuilder: (context, index) => AppCard(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2), child: Row(children: [Expanded(child: TransactionTile(transaction: rows[index], onTap: () => _edit(data, rows[index]))), PopupMenuButton<String>(onSelected: (value) { if (value == 'edit') _edit(data, rows[index]); else _delete(rows[index]); }, itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Sửa')), PopupMenuItem(value: 'delete', child: Text('Xóa'))])])))),
-          ]);
+          final rows = data.transactions.where((item) {
+            final matchesType = _filter == null || item.type == _filter;
+            final searchable = '${item.description} ${item.categoryName} ${item.walletName}'.toLowerCase();
+            return matchesType && (query.isEmpty || searchable.contains(query));
+          }).toList();
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Giao dịch', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                          Text('Thu nhập, chi tiêu và chuyển khoản', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                    FilledButton.icon(onPressed: () => _edit(data), icon: const Icon(Icons.add_rounded), label: const Text('Thêm')),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: TextField(
+                  controller: _search,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Tìm giao dịch'),
+                ),
+              ),
+              const SizedBox(height: 7),
+              SizedBox(
+                height: 42,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  children: [
+                    _filterChip('Tất cả', null),
+                    _filterChip('Chi tiêu', TransactionType.expense),
+                    _filterChip('Thu nhập', TransactionType.income),
+                    _filterChip('Chuyển khoản', TransactionType.transfer),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Expanded(
+                child: rows.isEmpty
+                    ? const EmptyState(icon: Icons.receipt_long_outlined, title: 'Không có giao dịch', message: 'Thay đổi bộ lọc hoặc thêm giao dịch mới.')
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          final request = _load();
+                          setState(() => _future = request);
+                          await request;
+                        },
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(14, 6, 14, 24),
+                          itemCount: rows.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 1),
+                          itemBuilder: (context, index) {
+                            final item = rows[index];
+                            return AppCard(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                              child: Row(
+                                children: [
+                                  Expanded(child: TransactionTile(transaction: item, onTap: () => _edit(data, item))),
+                                  PopupMenuButton<String>(
+                                    onSelected: (value) {
+                                      if (value == 'edit') {
+                                        _edit(data, item);
+                                      } else {
+                                        _delete(item);
+                                      }
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(value: 'edit', child: Text('Sửa')),
+                                      PopupMenuItem(value: 'delete', child: Text('Xóa')),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+              ),
+            ],
+          );
         },
       );
 
