@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -1045,7 +1045,7 @@ class _TransactionEditorState extends State<TransactionEditor> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 decoration: _inputDecoration('Danh mục', Icons.category_outlined),
                 items: categories
                     .map((category) => DropdownMenuItem(
