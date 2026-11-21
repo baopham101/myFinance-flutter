@@ -1,30 +1,23 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
-
-import 'package:myfinance_flutter/main.dart';
+import 'package:myfinance_flutter/core/formatters/money.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyFinanceApp());
+  group('VND amount handling', () {
+    test('parses grouped and ungrouped whole amounts', () {
+      expect(parseVnd('1.250.000'), 1250000);
+      expect(parseVnd('1250000'), 1250000);
+      expect(parseVnd('0', allowZero: true), 0);
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('rejects invalid text, negatives, and zero for transactions', () {
+      expect(() => parseVnd('12abc'), throwsA(isA<FormatException>()));
+      expect(() => parseVnd('-100'), throwsA(isA<FormatException>()));
+      expect(() => parseVnd('0'), throwsA(isA<FormatException>()));
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('formats integer values in Vietnamese dong', () {
+      expect(formatVnd(1250000), contains('1.250.000'));
+      expect(formatVnd(1250000), contains('₫'));
+    });
   });
 }
