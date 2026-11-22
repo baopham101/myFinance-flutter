@@ -111,9 +111,9 @@ class _FinanceAppShellState extends State<FinanceAppShell> {
     return Scaffold(
       appBar: AppBar(
         title: Row(children: [
-          Icon(Icons.account_balance_wallet_rounded, color: Theme.of(context).colorScheme.primary, size: 23),
+          Image.asset('assets/appLogo.png', height: 28, width: 28),
           const SizedBox(width: 9),
-          const Text('MyFinance', style: TextStyle(fontWeight: FontWeight.w800)),
+          const Text('Money Keeper', style: TextStyle(fontWeight: FontWeight.w800)),
         ]),
         actions: [
           if (_householdError != null)

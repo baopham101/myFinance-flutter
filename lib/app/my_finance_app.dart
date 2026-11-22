@@ -41,7 +41,7 @@ class _MyFinanceAppState extends State<MyFinanceApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'MyFinance',
+        title: 'Money Keeper',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
@@ -73,11 +73,11 @@ class _ConfigurationScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Icon(Icons.account_balance_wallet_rounded, size: 44, color: Theme.of(context).colorScheme.primary),
+                Image.asset('assets/appBanner.png', height: 80),
                 const SizedBox(height: 18),
                 Text('Cần cấu hình Supabase', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 10),
-                const Text('Ứng dụng Flutter dùng chung dữ liệu và tài khoản với MyFinance Web. Hãy truyền URL và anon key của dự án Supabase khi chạy.'),
+                const Text('Ứng dụng Flutter dùng chung dữ liệu và tài khoản với Money Keeper Web. Hãy truyền URL và anon key của dự án Supabase khi chạy.'),
                 const SizedBox(height: 16),
                 const SelectableText('flutter run --dart-define=SUPABASE_URL=https://<project>.supabase.co --dart-define=SUPABASE_ANON_KEY=<anon-key>'),
                 const SizedBox(height: 12),
