@@ -82,9 +82,9 @@ class _AuthPageState extends State<AuthPage> {
                 child: AppCard(
                   padding: const EdgeInsets.all(24),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    Icon(Icons.account_balance_wallet_rounded, size: 42, color: Theme.of(context).colorScheme.primary),
+                    Image.asset('assets/appLogo.png', height: 42, width: 42),
                     const SizedBox(height: 12),
-                    Text('MyFinance', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                    Text('Money Keeper', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 5),
                     Text(_register ? 'Tạo tài khoản để quản lý tài chính' : 'Đăng nhập để tiếp tục', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 24),
