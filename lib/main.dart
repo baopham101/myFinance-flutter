@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart' show WidgetsFlutterBinding;
+import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/my_finance_app.dart';
@@ -9,7 +10,7 @@ Future<void> main() async {
   String? initializationError;
   if (AppConfig.isConfigured) {
     try {
-      await Supabase.initialize(url: AppConfig.supabaseUrl, anonKey: AppConfig.supabaseAnonKey);
+      await Supabase.initialize(url: AppConfig.supabaseUrl, publishableKey: AppConfig.supabaseAnonKey);
     } catch (error) {
       initializationError = error.toString();
     }
