@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class CashFlowPoint {
   const CashFlowPoint({required this.month, required this.income, required this.expense});
