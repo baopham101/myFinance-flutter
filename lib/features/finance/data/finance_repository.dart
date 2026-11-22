@@ -73,13 +73,13 @@ class FinanceRepository {
     if (id == null) {
       await client.from('wallets').insert({
         'name': name,
-        'type': type.name,
+        'type': type.databaseValue,
         'opening_balance': openingBalance ?? 0,
         'currency': 'VND',
         'household_id': householdId,
       });
     } else {
-      await client.from('wallets').update({'name': name, 'type': type.name}).eq('id', id);
+      await client.from('wallets').update({'name': name, 'type': type.databaseValue}).eq('id', id);
     }
   }
 
