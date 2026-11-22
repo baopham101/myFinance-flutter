@@ -26,7 +26,7 @@
 
 ## Cấu hình và chạy
 
-Cần dùng URL và public anon/publishable key của cùng Supabase project với MyFinance Web. Lấy từ `.env.local` bản web; không dùng `service_role` key. Chạy:
+Cần dùng URL và public publishable/anon key của cùng Supabase project với MyFinance Web. Lấy từ `.env.local` bản web; không dùng `service_role` key. Chạy:
 
 ```bash
 flutter pub get
