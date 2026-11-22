@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/formatters/money.dart';
 import '../../../core/widgets/app_card.dart';
@@ -24,7 +24,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String _date(DateTime value) => '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
   Future<void> _pick(bool start) async {
     final selected = await showDatePicker(context: context, initialDate: start ? _start : _end, firstDate: DateTime(2000), lastDate: DateTime.now());
-    if (selected != null) setState(() { if (start) _start = selected; else _end = selected; });
+    if (selected != null) setState(() { if (start) { _start = selected; } else { _end = selected; } });
   }
 
   @override
@@ -57,14 +57,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
               _stat('Chênh lệch', income - expense, Theme.of(context).colorScheme.onSurface),
             ]),
             const SizedBox(height: 14),
-            SectionTitle('Chi tiêu theo danh mục'),
+            const SectionTitle('Chi tiêu theo danh mục'),
             AppCard(child: categories.isEmpty ? const EmptyState(icon: Icons.bar_chart_rounded, title: 'Chưa có dữ liệu', message: 'Không có khoản chi trong khoảng thời gian này.') : Column(children: [
               ExpenseDonutChart(slices: categories.take(6).toList()),
               const SizedBox(height: 10),
               ...categories.map((item) => ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: CircleAvatar(radius: 6, backgroundColor: item.color), title: Text(item.label), trailing: Text(formatVnd(item.amount), style: const TextStyle(fontWeight: FontWeight.w700)))),
             ])),
             const SizedBox(height: 14),
-            SectionTitle('Giao dịch trong kỳ'),
+            const SectionTitle('Giao dịch trong kỳ'),
             AppCard(child: rows.isEmpty ? const EmptyState(icon: Icons.receipt_long_outlined, title: 'Không có giao dịch', message: 'Thử chọn một khoảng thời gian khác.') : Column(children: [for (var i = 0; i < rows.length; i++) ...[if (i > 0) const Divider(height: 1), TransactionTile(transaction: rows[i])]])),
           ]);
         },
