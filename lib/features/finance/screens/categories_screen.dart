@@ -5,9 +5,10 @@ import '../data/finance_repository.dart';
 import '../data/models.dart';
 
 class CategoriesScreen extends StatefulWidget {
-  const CategoriesScreen({required this.repository, required this.householdId, super.key});
+  const CategoriesScreen({required this.repository, required this.householdId, this.onDataChanged, super.key});
   final FinanceRepository repository;
   final String? householdId;
+  final VoidCallback? onDataChanged;
   @override
   State<CategoriesScreen> createState() => _CategoriesScreenState();
 }
@@ -19,13 +20,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   Future<void> _edit([FinanceCategory? category]) async {
     final saved = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, useSafeArea: true, builder: (_) => _CategoryEditor(repository: widget.repository, householdId: widget.householdId, category: category));
-    if (saved == true && mounted) setState(() => _future = widget.repository.categories(widget.householdId));
+    if (saved == true && mounted) { setState(() => _future = widget.repository.categories(widget.householdId)); widget.onDataChanged?.call(); }
   }
 
   Future<void> _delete(FinanceCategory category) async {
     final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: const Text('Ẩn danh mục?'), content: Text('Danh mục “${category.name}” sẽ được ẩn. Giao dịch cũ vẫn giữ nguyên.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Ẩn'))]));
     if (confirmed != true) return;
-    try { await widget.repository.deleteCategory(category.id); if (mounted) setState(() => _future = widget.repository.categories(widget.householdId)); }
+    try { await widget.repository.deleteCategory(category.id); if (mounted) { setState(() => _future = widget.repository.categories(widget.householdId)); widget.onDataChanged?.call(); } }
     catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString()))); }
   }
 

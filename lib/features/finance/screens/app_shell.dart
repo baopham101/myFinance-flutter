@@ -25,7 +25,6 @@ class FinanceAppShell extends StatefulWidget {
 
 class _FinanceAppShellState extends State<FinanceAppShell> {
   final _repository = FinanceRepository(Supabase.instance.client);
-  final _transactionsKey = GlobalKey<TransactionsScreenState>();
   List<HouseholdInfo> _households = [];
   String? _householdId;
   String _page = 'overview';
@@ -48,6 +47,11 @@ class _FinanceAppShellState extends State<FinanceAppShell> {
       if (!mounted) return;
       setState(() { _householdError = _friendlyError(error); _loadingHouseholds = false; });
     }
+  }
+
+  void _onDataChanged() {
+    if (!mounted) return;
+    setState(() => _revision++);
   }
 
   void _navigate(String page) => setState(() => _page = page);
@@ -73,9 +77,8 @@ class _FinanceAppShellState extends State<FinanceAppShell> {
     );
     if (saved == true && mounted) {
       setState(() => _revision++);
-      // Refresh the transactions screen future so the just-saved transaction appears
+      // Refresh the households list as well
       _loadHouseholds();
-      _transactionsKey.currentState?.refresh();
     }
   }
 
@@ -91,10 +94,10 @@ class _FinanceAppShellState extends State<FinanceAppShell> {
     final key = ValueKey('${_page}_${_householdId ?? 'personal'}_$_revision');
     return switch (_page) {
       'overview' => DashboardScreen(key: key, repository: _repository, householdId: _householdId, onNavigate: _navigate, onAddTransaction: _quickAdd),
-      'transactions' => TransactionsScreen(key: _transactionsKey, repository: _repository, householdId: _householdId),
-      'wallets' => WalletsScreen(key: key, repository: _repository, householdId: _householdId),
-      'budgets' => BudgetsScreen(key: key, repository: _repository, householdId: _householdId),
-      'categories' => CategoriesScreen(key: key, repository: _repository, householdId: _householdId),
+      'transactions' => TransactionsScreen(key: key, repository: _repository, householdId: _householdId, onDataChanged: _onDataChanged),
+      'wallets' => WalletsScreen(key: key, repository: _repository, householdId: _householdId, onDataChanged: _onDataChanged),
+      'budgets' => BudgetsScreen(key: key, repository: _repository, householdId: _householdId, onDataChanged: _onDataChanged),
+      'categories' => CategoriesScreen(key: key, repository: _repository, householdId: _householdId, onDataChanged: _onDataChanged),
       'reports' => ReportsScreen(key: key, repository: _repository, householdId: _householdId),
       'household' => HouseholdScreen(key: key, repository: _repository, activeHouseholdId: _householdId, onChanged: _loadHouseholds),
       'settings' => SettingsScreen(key: key, themeMode: widget.themeMode, onThemeChanged: widget.onThemeChanged),
@@ -140,22 +143,31 @@ class _FinanceAppShellState extends State<FinanceAppShell> {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-      body: Row(children: [
-        if (wide)
-          NavigationRail(
-            selectedIndex: _tabIndex,
-            onDestinationSelected: (index) => _navigate(['overview', 'transactions', 'wallets', 'budgets', 'account'][index]),
-            labelType: NavigationRailLabelType.all,
-            destinations: const [
-              NavigationRailDestination(icon: Icon(Icons.space_dashboard_outlined), selectedIcon: Icon(Icons.space_dashboard_rounded), label: Text('Tổng quan')),
-              NavigationRailDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: Text('Giao dịch')),
-              NavigationRailDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet_rounded), label: Text('Ví')),
-              NavigationRailDestination(icon: Icon(Icons.pie_chart_outline_rounded), selectedIcon: Icon(Icons.pie_chart_rounded), label: Text('Ngân sách')),
-              NavigationRailDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: Text('Tài khoản')),
-            ],
-          ),
-        Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 980), child: _pageBody()))),
-      ]),
+      body: wide
+          ? Row(children: [
+              NavigationRail(
+                selectedIndex: _tabIndex,
+                onDestinationSelected: (index) => _navigate(['overview', 'transactions', 'wallets', 'budgets', 'account'][index]),
+                labelType: NavigationRailLabelType.all,
+                destinations: const [
+                  NavigationRailDestination(icon: Icon(Icons.space_dashboard_outlined), selectedIcon: Icon(Icons.space_dashboard_rounded), label: Text('Tổng quan')),
+                  NavigationRailDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: Text('Giao dịch')),
+                  NavigationRailDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet_rounded), label: Text('Ví')),
+                  NavigationRailDestination(icon: Icon(Icons.pie_chart_outline_rounded), selectedIcon: Icon(Icons.pie_chart_rounded), label: Text('Ngân sách')),
+                  NavigationRailDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: Text('Tài khoản')),
+                ],
+              ),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 980),
+                    child: _pageBody(),
+                  ),
+                ),
+              ),
+            ])
+          : _pageBody(),
       bottomNavigationBar: wide ? null : NavigationBar(
         selectedIndex: _tabIndex,
         onDestinationSelected: (index) => _navigate(['overview', 'transactions', 'wallets', 'budgets', 'account'][index]),

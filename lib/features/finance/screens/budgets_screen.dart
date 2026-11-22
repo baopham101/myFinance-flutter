@@ -1,14 +1,16 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/formatters/dates.dart';
 import '../../../core/formatters/money.dart';
 import '../../../core/widgets/app_card.dart';
 import '../data/finance_repository.dart';
 import '../data/models.dart';
 
 class BudgetsScreen extends StatefulWidget {
-  const BudgetsScreen({required this.repository, required this.householdId, super.key});
+  const BudgetsScreen({required this.repository, required this.householdId, this.onDataChanged, super.key});
   final FinanceRepository repository;
   final String? householdId;
+  final VoidCallback? onDataChanged;
   @override
   State<BudgetsScreen> createState() => _BudgetsScreenState();
 }
@@ -26,13 +28,17 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
     final categories = data.categories.where((item) => item.type == 'expense').toList();
     if (categories.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hãy tạo danh mục chi tiêu trước.'))); return; }
     final saved = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, useSafeArea: true, builder: (_) => _BudgetEditor(repository: widget.repository, householdId: widget.householdId, categories: categories, budget: budget));
-    if (saved == true && mounted) setState(() => _future = _load());
+    if (saved == true && mounted) {
+      final future = _load();
+      setState(() => _future = future);
+      widget.onDataChanged?.call();
+    }
   }
 
   Future<void> _delete(FinanceBudget budget) async {
     final yes = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: const Text('Xóa ngân sách?'), content: Text('Ẩn ngân sách ${budget.categoryName}?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Xóa'))]));
     if (yes != true) return;
-    try { await widget.repository.deleteBudget(budget.id); if (mounted) setState(() => _future = _load()); }
+    try { await widget.repository.deleteBudget(budget.id); if (mounted) { setState(() => _future = _load()); widget.onDataChanged?.call(); } }
     catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString()))); }
   }
 
@@ -96,7 +102,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(budget.categoryName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                       const SizedBox(height: 2),
-                      Text('${budget.periodStart} — ${budget.periodEnd}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                      Text('${formatDate(budget.periodStart)} — ${formatDate(budget.periodEnd)}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     ])),
                     Text('$percent%', style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 15)),
                     PopupMenuButton<String>(
@@ -167,8 +173,8 @@ class _BudgetEditorState extends State<_BudgetEditor> {
     const SizedBox(height: 12),
     TextFormField(controller: _limit, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Hạn mức (VND)'), validator: (value) { try { parseVnd(value ?? ''); return null; } on FormatException catch (error) { return error.message; } }),
     const SizedBox(height: 10),
-    OutlinedButton.icon(onPressed: () => _pick(true), icon: const Icon(Icons.calendar_today_outlined), label: Text('Bắt đầu: ${_date(_start)}')),
-    OutlinedButton.icon(onPressed: () => _pick(false), icon: const Icon(Icons.event_outlined), label: Text('Kết thúc: ${_date(_end)}')),
+    OutlinedButton.icon(onPressed: () => _pick(true), icon: const Icon(Icons.calendar_today_outlined), label: Text('Bắt đầu: ${formatDate(_date(_start))}')),
+    OutlinedButton.icon(onPressed: () => _pick(false), icon: const Icon(Icons.event_outlined), label: Text('Kết thúc: ${formatDate(_date(_end))}')),
     if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
     const SizedBox(height: 12),
     FilledButton(onPressed: _saving ? null : _submit, child: _saving ? const CircularProgressIndicator() : const Text('Lưu ngân sách')),

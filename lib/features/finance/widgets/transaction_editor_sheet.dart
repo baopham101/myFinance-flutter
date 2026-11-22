@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/formatters/dates.dart';
 import '../../../core/formatters/money.dart';
 import '../data/finance_repository.dart';
 import '../data/models.dart';
@@ -109,7 +110,7 @@ class _TransactionEditorSheetState extends State<TransactionEditorSheet> {
                   ),
                 ],
                 const SizedBox(height: 12),
-                OutlinedButton.icon(onPressed: _pickDate, icon: const Icon(Icons.calendar_today_outlined), label: Text('Ngày: ${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}')),
+                OutlinedButton.icon(onPressed: _pickDate, icon: const Icon(Icons.calendar_today_outlined), label: Text('Ngày: ${formatDate(_date.toIso8601String())}')),
                 const SizedBox(height: 12),
                 TextFormField(controller: _description, textCapitalization: TextCapitalization.sentences, maxLength: 300, decoration: const InputDecoration(labelText: 'Mô tả (không bắt buộc)', prefixIcon: Icon(Icons.notes_rounded)),),
                 if (_error != null) ...[const SizedBox(height: 8), Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))],

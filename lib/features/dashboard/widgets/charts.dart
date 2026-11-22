@@ -18,30 +18,110 @@ class ExpenseSlice {
   final Color color;
 }
 
-class CashFlowChart extends StatelessWidget {
+class CashFlowChart extends StatefulWidget {
   const CashFlowChart({required this.points, super.key});
   final List<CashFlowPoint> points;
 
   @override
+  State<CashFlowChart> createState() => _CashFlowChartState();
+}
+
+class _CashFlowChartState extends State<CashFlowChart> with SingleTickerProviderStateMixin {
+  int? _selectedIndex;
+  late final AnimationController _animController;
+  late final List<Animation<double>> _barAnimations;
+  bool _reduceMotion = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _barAnimations = List.generate(
+      widget.points.length,
+      (i) => CurvedAnimation(
+        parent: _animController,
+        curve: Interval((i * 0.1).clamp(0.0, 0.8), 1.0, curve: Curves.easeOutCubic),
+      ),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final media = MediaQuery.of(context);
+      _reduceMotion = media.disableAnimations;
+      if (!_reduceMotion) {
+        _animController.forward();
+      } else {
+        _animController.value = 1.0;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant CashFlowChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.points != widget.points) {
+      _animController.forward(from: 0);
+    }
+  }
+
+  void _onTapDown(TapDownDetails details, BoxConstraints constraints) {
+    final size = constraints.biggest;
+    if (widget.points.isEmpty) return;
+
+    const leftPadding = 38.0;
+    const rightPadding = 8.0;
+
+    final chartWidth = size.width - leftPadding - rightPadding;
+    final groupWidth = chartWidth / widget.points.length;
+    final dx = details.localPosition.dx;
+
+    final relativeX = dx - leftPadding;
+    if (relativeX < 0 || relativeX > chartWidth) {
+      setState(() => _selectedIndex = null);
+      return;
+    }
+
+    final index = (relativeX / groupWidth).floor().clamp(0, widget.points.length - 1);
+    setState(() => _selectedIndex = _selectedIndex == index ? null : index);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final maxValue = points.fold<int>(0, (max, p) => math.max(max, math.max(p.income, p.expense)));
-    final hasData = points.isNotEmpty && maxValue > 0;
+    final maxValue = widget.points.fold<int>(0, (max, p) => math.max(max, math.max(p.income, p.expense)));
+    final hasData = widget.points.isNotEmpty && maxValue > 0;
 
     return Column(
       children: [
-        SizedBox(
-          height: 190,
-          width: double.infinity,
-          child: CustomPaint(
-            painter: _CashFlowPainter(
-              points: points,
-              income: Theme.of(context).colorScheme.primary,
-              expense: Theme.of(context).colorScheme.error,
-              grid: Theme.of(context).colorScheme.outlineVariant,
-              labels: Theme.of(context).colorScheme.onSurfaceVariant,
-              maxValue: maxValue,
-            ),
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return GestureDetector(
+              onTapDown: (details) => _onTapDown(details, constraints),
+              child: SizedBox(
+                height: 190,
+                width: double.infinity,
+                child: CustomPaint(
+                  painter: _CashFlowPainter(
+                    points: widget.points,
+                    income: Theme.of(context).colorScheme.primary,
+                    expense: Theme.of(context).colorScheme.error,
+                    grid: Theme.of(context).colorScheme.outlineVariant,
+                    labels: Theme.of(context).colorScheme.onSurfaceVariant,
+                    maxValue: maxValue,
+                    selectedIndex: _selectedIndex,
+                    barAnimations: _reduceMotion
+                        ? List.generate(widget.points.length, (_) => const AlwaysStoppedAnimation(1.0))
+                        : _barAnimations,
+                    context: context,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
         if (!hasData)
           Padding(
@@ -68,6 +148,9 @@ class _CashFlowPainter extends CustomPainter {
     required this.grid,
     required this.labels,
     required this.maxValue,
+    required this.selectedIndex,
+    required this.barAnimations,
+    required this.context,
   });
 
   final List<CashFlowPoint> points;
@@ -76,6 +159,9 @@ class _CashFlowPainter extends CustomPainter {
   final Color grid;
   final Color labels;
   final int maxValue;
+  final int? selectedIndex;
+  final List<Animation<double>> barAnimations;
+  final BuildContext context;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -116,10 +202,11 @@ class _CashFlowPainter extends CustomPainter {
     for (var i = 0; i < points.length; i++) {
       final point = points[i];
       final centerX = leftPadding + groupWidth * (i + .5);
+      final anim = barAnimations[i].value;
 
       if (maxValue > 0) {
-        final incomeHeight = chartHeight * (point.income / scale);
-        final expenseHeight = chartHeight * (point.expense / scale);
+        final incomeHeight = chartHeight * (point.income / scale) * anim;
+        final expenseHeight = chartHeight * (point.expense / scale) * anim;
 
         if (point.income > 0) {
           final incomeRect = Rect.fromLTWH(
@@ -157,6 +244,39 @@ class _CashFlowPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(centerX - tp.width / 2, size.height - bottomPadding + 6));
+
+      // Selected tooltip overlay
+      if (selectedIndex == i) {
+        final overlayPaint = Paint()..color = Theme.of(context).colorScheme.surface.withValues(alpha: .95);
+        final overlayRect = Rect.fromLTWH(
+          leftPadding,
+          topPadding,
+          chartWidth,
+          chartHeight,
+        );
+        canvas.drawRRect(RRect.fromRectAndRadius(overlayRect, const Radius.circular(8)), overlayPaint);
+
+        // Show values for selected month
+        final selectedPoint = points[i];
+        final valueStyle = TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.w600);
+        final incomeText = 'Thu: ${compactVnd(selectedPoint.income)}';
+        final expenseText = 'Chi: ${compactVnd(selectedPoint.expense)}';
+
+        final incomeTp = TextPainter(
+          text: TextSpan(text: incomeText, style: valueStyle.copyWith(color: income)),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final expenseTp = TextPainter(
+          text: TextSpan(text: expenseText, style: valueStyle.copyWith(color: expense)),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        final tooltipY = topPadding + 16;
+        final tooltipX = centerX - math.max(incomeTp.width, expenseTp.width) / 2;
+
+        incomeTp.paint(canvas, Offset(tooltipX, tooltipY));
+        expenseTp.paint(canvas, Offset(tooltipX, tooltipY + incomeTp.height + 4));
+      }
     }
   }
 
@@ -165,7 +285,10 @@ class _CashFlowPainter extends CustomPainter {
       points != oldDelegate.points ||
       income != oldDelegate.income ||
       expense != oldDelegate.expense ||
-      maxValue != oldDelegate.maxValue;
+      maxValue != oldDelegate.maxValue ||
+      selectedIndex != oldDelegate.selectedIndex ||
+      barAnimations != oldDelegate.barAnimations ||
+      context != oldDelegate.context;
 }
 
 class ExpenseDonutChart extends StatelessWidget {

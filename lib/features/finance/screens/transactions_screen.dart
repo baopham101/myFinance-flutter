@@ -8,9 +8,10 @@ import '../widgets/transaction_editor_sheet.dart';
 import '../widgets/transaction_tile.dart';
 
 class TransactionsScreen extends StatefulWidget {
-  const TransactionsScreen({required this.repository, required this.householdId, super.key});
+  const TransactionsScreen({required this.repository, required this.householdId, this.onDataChanged, super.key});
   final FinanceRepository repository;
   final String? householdId;
+  final VoidCallback? onDataChanged;
   @override
   State<TransactionsScreen> createState() => TransactionsScreenState();
 }
@@ -49,7 +50,7 @@ class TransactionsScreenState extends State<TransactionsScreen> {
       useSafeArea: true,
       builder: (_) => TransactionEditorSheet(repository: widget.repository, wallets: data.wallets, categories: data.categories, householdId: widget.householdId, transaction: item),
     );
-    if (changed == true && mounted) setState(() => _future = _load());
+    if (changed == true && mounted) { setState(() => _future = _load()); widget.onDataChanged?.call(); }
   }
 
   Future<void> _delete(FinanceTransaction item) async {
@@ -61,7 +62,7 @@ class TransactionsScreenState extends State<TransactionsScreen> {
     if (confirmed != true) return;
     try {
       await widget.repository.deleteTransaction(item.id);
-      if (mounted) setState(() => _future = _load());
+      if (mounted) { setState(() => _future = _load()); widget.onDataChanged?.call(); }
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
     }
@@ -189,7 +190,13 @@ class TransactionsScreenState extends State<TransactionsScreen> {
                                         if (i > 0) const Divider(height: 1, indent: 64),
                                         Row(
                                           children: [
-                                            Expanded(child: TransactionTile(transaction: items[i], onTap: () => _edit(data, items[i]))),
+                                            Expanded(
+                                              child: TransactionTile(
+                                                transaction: items[i],
+                                                onTap: () => _edit(data, items[i]),
+                                                showDate: false, // Date shown in section header
+                                              ),
+                                            ),
                                             PopupMenuButton<String>(
                                               onSelected: (value) {
                                                 if (value == 'edit') {

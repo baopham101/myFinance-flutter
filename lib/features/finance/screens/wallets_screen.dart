@@ -6,9 +6,10 @@ import '../data/finance_repository.dart';
 import '../data/models.dart';
 
 class WalletsScreen extends StatefulWidget {
-  const WalletsScreen({required this.repository, required this.householdId, super.key});
+  const WalletsScreen({required this.repository, required this.householdId, this.onDataChanged, super.key});
   final FinanceRepository repository;
   final String? householdId;
+  final VoidCallback? onDataChanged;
   @override
   State<WalletsScreen> createState() => _WalletsScreenState();
 }
@@ -20,13 +21,16 @@ class _WalletsScreenState extends State<WalletsScreen> {
 
   Future<void> _edit([FinanceWallet? wallet]) async {
     final saved = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, useSafeArea: true, builder: (_) => _WalletEditor(repository: widget.repository, householdId: widget.householdId, wallet: wallet));
-    if (saved == true && mounted) setState(() => _future = widget.repository.wallets(widget.householdId));
+    if (saved == true && mounted) {
+      setState(() => _future = widget.repository.wallets(widget.householdId));
+      widget.onDataChanged?.call();
+    }
   }
 
   Future<void> _delete(FinanceWallet wallet) async {
     final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: const Text('Xóa ví?'), content: Text('Xóa ví “${wallet.name}”? Ví có giao dịch không thể xóa.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Xóa'))]));
     if (confirmed != true) return;
-    try { await widget.repository.deleteWallet(wallet.id); if (mounted) setState(() => _future = widget.repository.wallets(widget.householdId)); }
+    try { await widget.repository.deleteWallet(wallet.id); if (mounted) { setState(() => _future = widget.repository.wallets(widget.householdId)); widget.onDataChanged?.call(); } }
     catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString().replaceFirst('Exception: ', '')))); }
   }
 
@@ -77,20 +81,15 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 ])),
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   Text(formatVnd(wallet.balance), style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 15)),
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    IconButton(
-                      tooltip: 'Sửa ví',
-                      onPressed: () => _edit(wallet),
-                      icon: const Icon(Icons.edit_outlined, size: 19),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      tooltip: 'Xóa ví',
-                      onPressed: () => _delete(wallet),
-                      icon: const Icon(Icons.delete_outline_rounded, size: 19),
-                      visualDensity: VisualDensity.compact,
-                    )
-                  ])
+                  PopupMenuButton<String>(
+                    tooltip: 'Hành động',
+                    onSelected: (value) => value == 'edit' ? _edit(wallet) : _delete(wallet),
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'edit', child: Text('Sửa ví')),
+                      PopupMenuItem(value: 'delete', child: Text('Xóa ví')),
+                    ],
+                    icon: const Icon(Icons.more_vert_rounded, size: 20),
+                  ),
                 ]),
               ]),
             ))),
