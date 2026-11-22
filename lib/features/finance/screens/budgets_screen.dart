@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/formatters/money.dart';
 import '../../../core/widgets/app_card.dart';
@@ -107,7 +107,7 @@ class _BudgetEditorState extends State<_BudgetEditor> {
   Widget build(BuildContext context) => Padding(padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom), child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(18, 16, 18, 24), child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     Text(widget.budget == null ? 'Tạo ngân sách' : 'Sửa ngân sách', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
     const SizedBox(height: 14),
-    DropdownButtonFormField<String>(value: _categoryId, decoration: const InputDecoration(labelText: 'Danh mục chi tiêu'), items: widget.categories.map((item) => DropdownMenuItem(value: item.id, child: Text(item.name))).toList(), onChanged: (value) => setState(() => _categoryId = value!)),
+    DropdownButtonFormField<String>(initialValue: _categoryId, decoration: const InputDecoration(labelText: 'Danh mục chi tiêu'), items: widget.categories.map((item) => DropdownMenuItem(value: item.id, child: Text(item.name))).toList(), onChanged: (value) => setState(() => _categoryId = value!)),
     const SizedBox(height: 12),
     TextFormField(controller: _limit, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Hạn mức (VND)'), validator: (value) { try { parseVnd(value ?? ''); return null; } on FormatException catch (error) { return error.message; } }),
     const SizedBox(height: 10),
@@ -120,7 +120,7 @@ class _BudgetEditorState extends State<_BudgetEditor> {
 
   Future<void> _pick(bool start) async {
     final selected = await showDatePicker(context: context, initialDate: start ? _start : _end, firstDate: DateTime(2000), lastDate: DateTime(2100));
-    if (selected != null) setState(() { if (start) _start = selected; else _end = selected; });
+    if (selected != null) setState(() { if (start) { _start = selected; } else { _end = selected; } });
   }
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
