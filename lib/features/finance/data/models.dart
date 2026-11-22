@@ -2,12 +2,16 @@ typedef JsonMap = Map<String, dynamic>;
 
 enum TransactionType { expense, income, transfer }
 
-enum WalletType { cash, bank, card, e_wallet, savings }
+enum WalletType { cash, bank, card, eWallet, savings }
+
+extension WalletTypeDatabaseValue on WalletType {
+  String get databaseValue => this == WalletType.eWallet ? 'e_wallet' : name;
+}
 
 enum HouseholdRole { owner, admin, member }
 
 TransactionType transactionTypeFrom(String value) => TransactionType.values.firstWhere((item) => item.name == value);
-WalletType walletTypeFrom(String value) => WalletType.values.firstWhere((item) => item.name == value, orElse: () => WalletType.cash);
+WalletType walletTypeFrom(String value) => value == 'e_wallet' ? WalletType.eWallet : WalletType.values.firstWhere((item) => item.name == value, orElse: () => WalletType.cash);
 HouseholdRole householdRoleFrom(String value) => HouseholdRole.values.firstWhere((item) => item.name == value, orElse: () => HouseholdRole.member);
 
 class FinanceCategory {
