@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/config/app_config.dart';
@@ -48,8 +48,8 @@ class _MyFinanceAppState extends State<MyFinanceApp> {
         themeMode: _themeMode,
         home: !_loaded
             ? const _SplashScreen()
-            : initializationError != null
-                ? _ConfigurationScreen(error: initializationError!)
+            : widget.initializationError != null
+                ? _ConfigurationScreen(error: widget.initializationError!)
                 : !AppConfig.isConfigured
                     ? const _ConfigurationScreen()
                     : AuthGate(themeMode: _themeMode, onThemeChanged: _setTheme),
