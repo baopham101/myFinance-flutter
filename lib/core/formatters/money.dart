@@ -4,6 +4,20 @@ final _vnd = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits
 
 String formatVnd(int amount) => _vnd.format(amount);
 
+/// Compact VND label for tight chart axes, e.g. `10k`, `1,5tr`.
+String compactVnd(num value) {
+  if (value == 0) return '0';
+  final abs = value.abs();
+  if (abs >= 1000000) return '${_trim(value / 1000000)}tr';
+  if (abs >= 1000) return '${_trim(value / 1000)}k';
+  return value.round().toString();
+}
+
+String _trim(double value) {
+  if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+  return value.toStringAsFixed(1).replaceAll('.', ',');
+}
+
 int parseVnd(String input, {bool allowZero = false}) {
   final normalized = input.trim().replaceAll(RegExp(r'[,.\s₫]'), '');
   if (!RegExp(r'^\d+$').hasMatch(normalized)) {

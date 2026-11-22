@@ -1,13 +1,15 @@
 import 'package:material_ui/material_ui.dart';
 
 class AppCard extends StatelessWidget {
-  const AppCard({required this.child, this.padding = const EdgeInsets.all(16), this.margin, super.key});
+  const AppCard({required this.child, this.padding = const EdgeInsets.all(16), this.margin, this.elevation = 2, super.key});
   final Widget child;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
+  final double elevation;
 
   @override
   Widget build(BuildContext context) => Card(
+        elevation: elevation,
         margin: margin,
         child: Padding(padding: padding, child: child),
       );

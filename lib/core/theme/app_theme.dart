@@ -28,6 +28,8 @@ class AppTheme {
             : const Color(0xFF101713),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        centerTitle: false,
+        scrolledUnderElevation: 0,
       ),
       cardTheme: CardThemeData(
         color: scheme.surface,
@@ -59,6 +61,15 @@ class AppTheme {
         backgroundColor: seed,
         foregroundColor: Colors.white,
       ),
+      textTheme: const TextTheme(
+        headlineSmall: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.6),
+        titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+        titleMedium: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+        bodyLarge: TextStyle(fontSize: 16),
+        bodyMedium: TextStyle(fontSize: 14),
+        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        labelSmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      ).apply(fontFamily: 'Roboto'),
     );
   }
 }

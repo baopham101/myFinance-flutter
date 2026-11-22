@@ -38,15 +38,62 @@ class _WalletsScreenState extends State<WalletsScreen> {
           if (snapshot.hasError) return _screenError(context, snapshot.error!, () => setState(() => _future = widget.repository.wallets(widget.householdId)));
           final wallets = snapshot.data ?? [];
           return ListView(padding: const EdgeInsets.fromLTRB(18, 14, 18, 28), children: [
-            Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Ví của tôi', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)), Text('Tài khoản tiền mặt, ngân hàng và ví điện tử', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))])), FilledButton.icon(onPressed: () => _edit(), icon: const Icon(Icons.add_rounded), label: const Text('Thêm ví'))]),
-            const SizedBox(height: 16),
-            if (wallets.isEmpty) const AppCard(child: EmptyState(icon: Icons.account_balance_wallet_outlined, title: 'Chưa có ví', message: 'Tạo ví đầu tiên để ghi nhận số dư và giao dịch.')),
-            ...wallets.map((wallet) => Padding(padding: const EdgeInsets.only(bottom: 10), child: AppCard(child: Row(children: [
-              Container(width: 46, height: 46, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: .1), borderRadius: BorderRadius.circular(14)), child: Icon(_walletIcon(wallet.type), color: Theme.of(context).colorScheme.primary)),
-              const SizedBox(width: 13),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(wallet.name, style: const TextStyle(fontWeight: FontWeight.w700)), Text(_walletTypeLabel(wallet.type), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))])),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text(formatVnd(wallet.balance), style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)), Row(mainAxisSize: MainAxisSize.min, children: [IconButton(tooltip: 'Sửa ví', onPressed: () => _edit(wallet), icon: const Icon(Icons.edit_outlined, size: 19)), IconButton(tooltip: 'Xóa ví', onPressed: () => _delete(wallet), icon: const Icon(Icons.delete_outline_rounded, size: 19))])]),
-            ])))),
+            Row(children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Ví của tôi', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                const SizedBox(height: 4),
+                Text('Tài khoản tiền mặt, ngân hàng và ví điện tử', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
+              ])),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                onPressed: () => _edit(),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Thêm ví'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 20),
+            if (wallets.isEmpty) const AppCard(elevation: 0, child: EmptyState(icon: Icons.account_balance_wallet_outlined, title: 'Chưa có ví', message: 'Tạo ví đầu tiên để ghi nhận số dư và giao dịch.')),
+            ...wallets.map((wallet) => Padding(padding: const EdgeInsets.only(bottom: 12), child: AppCard(
+              elevation: 0,
+              child: Row(children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: .1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(_walletIcon(wallet.type), color: Theme.of(context).colorScheme.primary, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(wallet.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  const SizedBox(height: 2),
+                  Text(_walletTypeLabel(wallet.type), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                ])),
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text(formatVnd(wallet.balance), style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 15)),
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    IconButton(
+                      tooltip: 'Sửa ví',
+                      onPressed: () => _edit(wallet),
+                      icon: const Icon(Icons.edit_outlined, size: 19),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    IconButton(
+                      tooltip: 'Xóa ví',
+                      onPressed: () => _delete(wallet),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 19),
+                      visualDensity: VisualDensity.compact,
+                    )
+                  ])
+                ]),
+              ]),
+            ))),
           ]);
         },
       );

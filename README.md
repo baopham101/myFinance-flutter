@@ -26,7 +26,22 @@
 
 ## Cấu hình và chạy
 
-Cần dùng URL và public publishable/anon key của cùng Supabase project với MyFinance Web. Lấy từ `.env.local` bản web; không dùng `service_role` key. Chạy:
+Cần dùng URL và public publishable/anon key của cùng Supabase project với MyFinance Web. Lấy từ `.env.local` bản web; không dùng `service_role` key.
+
+### Cách 1: Tự động (khuyên dùng)
+
+1. Copy `.env.example` thành `.env` và điền giá trị Supabase:
+   ```bash
+   cp .env.example .env
+   # Sửa file .env với SUPABASE_URL và SUPABASE_ANON_KEY thật
+   ```
+2. Chạy:
+   ```bash
+   flutter pub get
+   flutter run
+   ```
+
+### Cách 2: Truyền thủ công (fallback)
 
 ```bash
 flutter pub get

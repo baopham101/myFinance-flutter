@@ -119,7 +119,7 @@ class _FinanceAppShellState extends State<FinanceAppShell> {
             const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))
           else
             Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: 12),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _householdId ?? '',
@@ -137,6 +137,8 @@ class _FinanceAppShellState extends State<FinanceAppShell> {
               ),
             ),
         ],
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       body: Row(children: [
         if (wide)

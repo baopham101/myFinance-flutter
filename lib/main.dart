@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart' show WidgetsFlutterBinding;
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,6 +6,7 @@ import 'core/config/app_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppConfig.loadFromEnv();
   String? initializationError;
   if (AppConfig.isConfigured) {
     try {

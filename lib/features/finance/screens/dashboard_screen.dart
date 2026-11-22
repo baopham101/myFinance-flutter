@@ -75,19 +75,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Row(children: [
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Tổng quan', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-                    Text('Dòng tiền của bạn trong tháng này', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    Text('Tổng quan', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                    const SizedBox(height: 4),
+                    Text('Dòng tiền của bạn trong tháng này', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
                   ])),
-                  FilledButton.icon(onPressed: widget.onAddTransaction, icon: const Icon(Icons.add_rounded), label: const Text('Thêm giao dịch')),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: widget.onAddTransaction,
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Thêm giao dịch'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
                 ]),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 AppCard(
                   padding: const EdgeInsets.all(20),
+                  elevation: 0,
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Tổng số dư', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                    const SizedBox(height: 7),
-                    Text(formatVnd(data.balance), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 17),
+                    Text('Tổng số dư', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    Text(formatVnd(data.balance), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -1)),
+                    const SizedBox(height: 18),
                     Row(children: [
                       Expanded(child: _summary(context, 'Thu nhập tháng này', data.income, Icons.south_west_rounded, Theme.of(context).colorScheme.primary)),
                       const SizedBox(width: 12),
@@ -95,45 +106,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ]),
                   ]),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 SectionTitle('Dòng tiền', action: 'Báo cáo', onAction: () => widget.onNavigate('reports')),
-                AppCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                AppCard(elevation: 0, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Thu nhập và chi tiêu · 6 tháng', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   const Wrap(spacing: 14, children: [
                     _LegendDot(color: Color(0xFF16845B), label: 'Thu nhập'),
                     _LegendDot(color: Color(0xFFDB5B62), label: 'Chi tiêu'),
                   ]),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
                   CashFlowChart(points: data.flow),
                 ])),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 SectionTitle('Chi tiêu theo danh mục', action: 'Xem báo cáo', onAction: () => widget.onNavigate('reports')),
                 AppCard(
+                  elevation: 0,
                   child: data.categories.isEmpty
                       ? const EmptyState(icon: Icons.pie_chart_outline_rounded, title: 'Chưa có khoản chi', message: 'Giao dịch chi tiêu sẽ được phân tích tại đây.')
-                      : Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                          ExpenseDonutChart(slices: data.categories),
-                          const SizedBox(width: 14),
-                          Expanded(child: Column(children: data.categories.map((slice) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 5),
-                            child: Row(children: [
-                              Container(width: 9, height: 9, decoration: BoxDecoration(color: slice.color, shape: BoxShape.circle)),
-                              const SizedBox(width: 8),
-                              Expanded(child: Text(slice.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall)),
-                              Text(formatVnd(slice.amount), style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
-                            ]),
-                          )).toList())),
-                        ]),
+                      : LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isSmall = constraints.maxWidth < 340;
+                            if (isSmall) {
+                              return Column(
+                                children: [
+                                  ExpenseDonutChart(slices: data.categories, size: 110),
+                                  const SizedBox(height: 14),
+                                  ...data.categories.map((slice) => Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 5),
+                                        child: Row(
+                                          children: [
+                                            Container(width: 9, height: 9, decoration: BoxDecoration(color: slice.color, shape: BoxShape.circle)),
+                                            const SizedBox(width: 8),
+                                            Expanded(child: Text(slice.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall)),
+                                            Text(formatVnd(slice.amount), style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
+                                          ],
+                                        ),
+                                      )),
+                                ],
+                              );
+                            }
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                ExpenseDonutChart(slices: data.categories, size: 100),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: data.categories
+                                        .map((slice) => Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 5),
+                                              child: Row(
+                                                children: [
+                                                  Container(width: 9, height: 9, decoration: BoxDecoration(color: slice.color, shape: BoxShape.circle)),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(child: Text(slice.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall)),
+                                                  Text(formatVnd(slice.amount), style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
+                                                ],
+                                              ),
+                                            ))
+                                        .toList(),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 SectionTitle('Giao dịch gần đây', action: 'Tất cả', onAction: () => widget.onNavigate('transactions')),
-                AppCard(child: data.transactions.isEmpty
-                    ? const EmptyState(icon: Icons.receipt_long_rounded, title: 'Chưa có giao dịch', message: 'Thêm khoản thu hoặc chi đầu tiên của bạn.')
-                    : Column(children: [for (var i = 0; i < data.transactions.length; i++) ...[
-                        if (i > 0) const Divider(height: 1),
-                        TransactionTile(transaction: data.transactions[i]),
-                      ]])),
+                AppCard(
+                  elevation: 0,
+                  child: data.transactions.isEmpty
+                      ? const EmptyState(icon: Icons.receipt_long_rounded, title: 'Chưa có giao dịch', message: 'Thêm khoản thu hoặc chi đầu tiên của bạn.')
+                      : Column(children: [for (var i = 0; i < data.transactions.length; i++) ...[
+                          if (i > 0) const Divider(height: 1),
+                          TransactionTile(transaction: data.transactions[i]),
+                        ]])),
               ],
             ),
           );

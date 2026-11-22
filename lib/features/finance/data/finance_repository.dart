@@ -7,15 +7,17 @@ class FinanceRepository {
   final SupabaseClient client;
 
   Future<List<FinanceCategory>> categories(String? householdId) async {
-    dynamic query = client.from('categories').select().isFilter('deleted_at', null).order('type').order('name');
-    query = householdId == null ? query.isFilter('household_id', null) : query.eq('household_id', householdId);
+    dynamic query = client.from('categories').select().filter('deleted_at', 'is', null);
+    query = householdId == null ? query.filter('household_id', 'is', null) : query.eq('household_id', householdId);
+    query = query.order('type').order('name');
     final rows = await query;
     return (rows as List).map((row) => FinanceCategory.fromJson(Map<String, dynamic>.from(row as Map))).toList();
   }
 
   Future<List<FinanceWallet>> wallets(String? householdId) async {
-    dynamic query = client.from('wallets').select().isFilter('deleted_at', null).order('created_at');
-    query = householdId == null ? query.isFilter('household_id', null) : query.eq('household_id', householdId);
+    dynamic query = client.from('wallets').select().filter('deleted_at', 'is', null);
+    query = householdId == null ? query.filter('household_id', 'is', null) : query.eq('household_id', householdId);
+    query = query.order('created_at');
     final rows = await query as List;
     final result = <FinanceWallet>[];
     for (final row in rows) {
@@ -35,8 +37,9 @@ class FinanceRepository {
       wallet:wallets!transactions_wallet_id_fkey(id,name),
       to_wallet:wallets!transactions_to_wallet_id_fkey(id,name),
       category:categories(id,name,type,color)
-    ''').isFilter('deleted_at', null).order('transaction_date', ascending: false).order('created_at', ascending: false).limit(500);
-    query = householdId == null ? query.isFilter('household_id', null) : query.eq('household_id', householdId);
+    ''').filter('deleted_at', 'is', null);
+    query = householdId == null ? query.filter('household_id', 'is', null) : query.eq('household_id', householdId);
+    query = query.order('transaction_date', ascending: false).order('created_at', ascending: false).limit(500);
     final rows = await query as List;
     return rows.map((row) => FinanceTransaction.fromJson(Map<String, dynamic>.from(row as Map))).toList();
   }
@@ -84,7 +87,7 @@ class FinanceRepository {
   }
 
   Future<void> deleteWallet(String id) async {
-    final useCount = await client.from('transactions').select('id').isFilter('deleted_at', null).or('wallet_id.eq.$id,to_wallet_id.eq.$id').limit(1);
+    final useCount = await client.from('transactions').select('id').filter('deleted_at', 'is', null).or('wallet_id.eq.$id,to_wallet_id.eq.$id').limit(1);
     if ((useCount as List).isNotEmpty) throw Exception('Ví đã có giao dịch nên không thể xóa.');
     await client.from('wallets').update({'deleted_at': DateTime.now().toUtc().toIso8601String()}).eq('id', id);
   }
@@ -148,8 +151,9 @@ class FinanceRepository {
   }
 
   Future<List<FinanceBudget>> budgets(String? householdId) async {
-    dynamic query = client.from('budgets').select('*, category:categories(id,name,color)').isFilter('deleted_at', null).order('period_start', ascending: false);
-    query = householdId == null ? query.isFilter('household_id', null) : query.eq('household_id', householdId);
+    dynamic query = client.from('budgets').select('*, category:categories(id,name,color)').filter('deleted_at', 'is', null);
+    query = householdId == null ? query.filter('household_id', 'is', null) : query.eq('household_id', householdId);
+    query = query.order('period_start', ascending: false);
     final rows = await query as List;
     final result = <FinanceBudget>[];
     for (final item in rows) {
