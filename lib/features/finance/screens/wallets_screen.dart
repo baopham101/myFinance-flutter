@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/formatters/money.dart';
 import '../../../core/widgets/app_card.dart';
@@ -81,7 +81,7 @@ class _WalletEditorState extends State<_WalletEditor> {
           const SizedBox(height: 16),
           TextFormField(controller: _name, autofocus: true, maxLength: 80, decoration: const InputDecoration(labelText: 'Tên ví', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (value) => value == null || value.trim().isEmpty ? 'Nhập tên ví.' : null),
           const SizedBox(height: 8),
-          DropdownButtonFormField<WalletType>(value: _type, decoration: const InputDecoration(labelText: 'Loại ví'), items: WalletType.values.map((item) => DropdownMenuItem(value: item, child: Text(_walletTypeLabel(item)))).toList(), onChanged: (value) => setState(() => _type = value!)),
+          DropdownButtonFormField<WalletType>(initialValue: _type, decoration: const InputDecoration(labelText: 'Loại ví'), items: WalletType.values.map((item) => DropdownMenuItem(value: item, child: Text(_walletTypeLabel(item)))).toList(), onChanged: (value) => setState(() => _type = value!)),
           if (widget.wallet == null) ...[
             const SizedBox(height: 12),
             TextFormField(controller: _opening, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Số dư ban đầu (VND)', prefixIcon: Icon(Icons.payments_outlined)), validator: (value) { try { parseVnd(value ?? '', allowZero: true); return null; } on FormatException catch (error) { return error.message; } }),
@@ -105,7 +105,7 @@ class _WalletEditorState extends State<_WalletEditor> {
   }
 }
 
-String _walletTypeLabel(WalletType type) => switch (type) { WalletType.cash => 'Tiền mặt', WalletType.bank => 'Tài khoản ngân hàng', WalletType.card => 'Thẻ', WalletType.e_wallet => 'Ví điện tử', WalletType.savings => 'Tiết kiệm' };
-IconData _walletIcon(WalletType type) => switch (type) { WalletType.cash => Icons.payments_outlined, WalletType.bank => Icons.account_balance_outlined, WalletType.card => Icons.credit_card_rounded, WalletType.e_wallet => Icons.phone_android_rounded, WalletType.savings => Icons.savings_outlined };
+String _walletTypeLabel(WalletType type) => switch (type) { WalletType.cash => 'Tiền mặt', WalletType.bank => 'Tài khoản ngân hàng', WalletType.card => 'Thẻ', WalletType.eWallet => 'Ví điện tử', WalletType.savings => 'Tiết kiệm' };
+IconData _walletIcon(WalletType type) => switch (type) { WalletType.cash => Icons.payments_outlined, WalletType.bank => Icons.account_balance_outlined, WalletType.card => Icons.credit_card_rounded, WalletType.eWallet => Icons.phone_android_rounded, WalletType.savings => Icons.savings_outlined };
 
 Widget _screenError(BuildContext context, Object error, VoidCallback retry) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [Text('Không thể tải dữ liệu', style: Theme.of(context).textTheme.titleMedium), const SizedBox(height: 8), Text(error.toString(), textAlign: TextAlign.center), TextButton(onPressed: retry, child: const Text('Thử lại'))])));
