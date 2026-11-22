@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class AppCard extends StatelessWidget {
   const AppCard({required this.child, this.padding = const EdgeInsets.all(16), this.margin, super.key});
