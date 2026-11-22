@@ -11,10 +11,10 @@ class TransactionsScreen extends StatefulWidget {
   final FinanceRepository repository;
   final String? householdId;
   @override
-  State<TransactionsScreen> createState() => _TransactionsScreenState();
+  State<TransactionsScreen> createState() => TransactionsScreenState();
 }
 
-class _TransactionsScreenState extends State<TransactionsScreen> {
+class TransactionsScreenState extends State<TransactionsScreen> {
   late Future<_TransactionData> _future;
   TransactionType? _filter;
   final _search = TextEditingController();
@@ -23,6 +23,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   void initState() { super.initState(); _future = _load(); }
   @override
   void dispose() { _search.dispose(); super.dispose(); }
+
+  void refresh() {
+    if (mounted) setState(() => _future = _load());
+  }
 
   Future<_TransactionData> _load() async {
     final results = await Future.wait([

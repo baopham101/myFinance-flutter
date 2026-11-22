@@ -25,6 +25,7 @@ class FinanceAppShell extends StatefulWidget {
 
 class _FinanceAppShellState extends State<FinanceAppShell> {
   final _repository = FinanceRepository(Supabase.instance.client);
+  final _transactionsKey = GlobalKey<TransactionsScreenState>();
   List<HouseholdInfo> _households = [];
   String? _householdId;
   String _page = 'overview';
@@ -70,7 +71,12 @@ class _FinanceAppShellState extends State<FinanceAppShell> {
       context: context, isScrollControlled: true, useSafeArea: true,
       builder: (_) => TransactionEditorSheet(repository: _repository, wallets: wallets, categories: values[1] as List<FinanceCategory>, householdId: _householdId),
     );
-    if (saved == true && mounted) setState(() => _revision++);
+    if (saved == true && mounted) {
+      setState(() => _revision++);
+      // Refresh the transactions screen future so the just-saved transaction appears
+      _loadHouseholds();
+      _transactionsKey.currentState?.refresh();
+    }
   }
 
   int get _tabIndex => switch (_page) {
@@ -85,7 +91,7 @@ class _FinanceAppShellState extends State<FinanceAppShell> {
     final key = ValueKey('${_page}_${_householdId ?? 'personal'}_$_revision');
     return switch (_page) {
       'overview' => DashboardScreen(key: key, repository: _repository, householdId: _householdId, onNavigate: _navigate, onAddTransaction: _quickAdd),
-      'transactions' => TransactionsScreen(key: key, repository: _repository, householdId: _householdId),
+      'transactions' => TransactionsScreen(key: _transactionsKey, repository: _repository, householdId: _householdId),
       'wallets' => WalletsScreen(key: key, repository: _repository, householdId: _householdId),
       'budgets' => BudgetsScreen(key: key, repository: _repository, householdId: _householdId),
       'categories' => CategoriesScreen(key: key, repository: _repository, householdId: _householdId),
