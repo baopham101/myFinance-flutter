@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/widgets/app_card.dart';
@@ -90,11 +90,11 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
               if (data.households.isEmpty) const AppCard(child: EmptyState(icon: Icons.group_outlined, title: 'Bạn chưa tham gia household', message: 'Tạo household hoặc chấp nhận lời mời để chia sẻ tài chính.')),
               ...data.households.map((item) => AppCard(margin: const EdgeInsets.only(top: 8), child: ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.home_work_outlined), title: Text(item.name), subtitle: Text(item.role.name), trailing: const Icon(Icons.check_circle_outline_rounded)))),
             ] else ...[
-              AppCard(child: Row(children: [CircleAvatar(child: const Icon(Icons.home_work_outlined, color: Colors.white), backgroundColor: Theme.of(context).colorScheme.primary), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(active.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)), Text('Vai trò: ${_roleName(active.role)}', style: Theme.of(context).textTheme.bodySmall)])), if (active.role != HouseholdRole.owner) IconButton(tooltip: 'Rời household', onPressed: _busy ? null : () => _leave(active), icon: const Icon(Icons.logout_rounded))])),
+              AppCard(child: Row(children: [CircleAvatar(backgroundColor: Theme.of(context).colorScheme.primary, child: const Icon(Icons.home_work_outlined, color: Colors.white)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(active.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)), Text('Vai trò: ${_roleName(active.role)}', style: Theme.of(context).textTheme.bodySmall)])), if (active.role != HouseholdRole.owner) IconButton(tooltip: 'Rời household', onPressed: _busy ? null : () => _leave(active), icon: const Icon(Icons.logout_rounded))])),
               if (active.role == HouseholdRole.owner || active.role == HouseholdRole.admin) ...[
                 const SizedBox(height: 18),
                 const SectionTitle('Mời thành viên'),
-                AppCard(child: Column(children: [TextField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email thành viên', prefixIcon: Icon(Icons.email_outlined))), const SizedBox(height: 10), Row(children: [Expanded(child: DropdownButtonFormField<String>(value: _role, decoration: const InputDecoration(labelText: 'Quyền'), items: const [DropdownMenuItem(value: 'member', child: Text('Thành viên')), DropdownMenuItem(value: 'admin', child: Text('Quản trị viên'))], onChanged: (value) => setState(() => _role = value!))), const SizedBox(width: 10), FilledButton(onPressed: _busy ? null : () => _invite(active.id), child: const Text('Gửi lời mời'))])])),
+                AppCard(child: Column(children: [TextField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email thành viên', prefixIcon: Icon(Icons.email_outlined))), const SizedBox(height: 10), Row(children: [Expanded(child: DropdownButtonFormField<String>(initialValue: _role, decoration: const InputDecoration(labelText: 'Quyền'), items: const [DropdownMenuItem(value: 'member', child: Text('Thành viên')), DropdownMenuItem(value: 'admin', child: Text('Quản trị viên'))], onChanged: (value) => setState(() => _role = value!))), const SizedBox(width: 10), FilledButton(onPressed: _busy ? null : () => _invite(active.id), child: const Text('Gửi lời mời'))])])),
               ],
               const SizedBox(height: 18),
               const SectionTitle('Thành viên'),
