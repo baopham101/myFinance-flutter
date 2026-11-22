@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/formatters/money.dart';
 import '../data/finance_repository.dart';
@@ -83,7 +83,7 @@ class _TransactionEditorSheetState extends State<TransactionEditorSheet> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _walletId,
+                  initialValue: _walletId,
                   decoration: const InputDecoration(labelText: 'Ví nguồn', prefixIcon: Icon(Icons.account_balance_wallet_outlined)),
                   items: widget.wallets.map((wallet) => DropdownMenuItem(value: wallet.id, child: Text('${wallet.name} · ${formatVnd(wallet.balance)}', overflow: TextOverflow.ellipsis))).toList(),
                   onChanged: (value) => setState(() { _walletId = value; if (_destinationId == value) _destinationId = widget.wallets.where((item) => item.id != value).firstOrNull?.id; }),
@@ -92,7 +92,7 @@ class _TransactionEditorSheetState extends State<TransactionEditorSheet> {
                 if (_type == TransactionType.transfer) ...[
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _destinationId,
+                    initialValue: _destinationId,
                     decoration: const InputDecoration(labelText: 'Ví nhận', prefixIcon: Icon(Icons.call_received_rounded)),
                     items: widget.wallets.where((wallet) => wallet.id != _walletId).map((wallet) => DropdownMenuItem(value: wallet.id, child: Text(wallet.name))).toList(),
                     onChanged: (value) => setState(() => _destinationId = value),
@@ -101,7 +101,7 @@ class _TransactionEditorSheetState extends State<TransactionEditorSheet> {
                 ] else ...[
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _categoryId,
+                    initialValue: _categoryId,
                     decoration: const InputDecoration(labelText: 'Danh mục', prefixIcon: Icon(Icons.category_outlined)),
                     items: _categories.map((category) => DropdownMenuItem(value: category.id, child: Text(category.name))).toList(),
                     onChanged: (value) => setState(() => _categoryId = value),
