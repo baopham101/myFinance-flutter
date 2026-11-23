@@ -1,17 +1,19 @@
 import 'package:material_ui/material_ui.dart';
 
 class AppCard extends StatelessWidget {
-  const AppCard({required this.child, this.padding = const EdgeInsets.all(16), this.margin, this.elevation = 2, this.gradient, super.key});
+  const AppCard({required this.child, this.padding = const EdgeInsets.all(16), this.margin, this.elevation = 2, this.gradient, this.color, super.key});
   final Widget child;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
   final double elevation;
   final Gradient? gradient;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => Card(
         elevation: elevation,
         margin: margin,
+        color: color,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Ink(
           decoration: gradient != null

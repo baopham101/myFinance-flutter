@@ -29,25 +29,15 @@ class CashFlowChart extends StatefulWidget {
 class _CashFlowChartState extends State<CashFlowChart> with SingleTickerProviderStateMixin {
   int? _selectedIndex;
   late final AnimationController _animController;
-  late final List<Animation<double>> _barAnimations;
-  bool _reduceMotion = false;
 
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    _barAnimations = List.generate(
-      widget.points.length,
-      (i) => CurvedAnimation(
-        parent: _animController,
-        curve: Interval((i * 0.1).clamp(0.0, 0.8), 1.0, curve: Curves.easeOutCubic),
-      ),
-    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final media = MediaQuery.of(context);
-      _reduceMotion = media.disableAnimations;
-      if (!_reduceMotion) {
+      if (!media.disableAnimations) {
         _animController.forward();
       } else {
         _animController.value = 1.0;
@@ -69,69 +59,181 @@ class _CashFlowChartState extends State<CashFlowChart> with SingleTickerProvider
     }
   }
 
-  void _onTapDown(TapDownDetails details, BoxConstraints constraints) {
-    final size = constraints.biggest;
-    if (widget.points.isEmpty) return;
-
-    const leftPadding = 38.0;
-    const rightPadding = 8.0;
-
-    final chartWidth = size.width - leftPadding - rightPadding;
-    final groupWidth = chartWidth / widget.points.length;
-    final dx = details.localPosition.dx;
-
-    final relativeX = dx - leftPadding;
-    if (relativeX < 0 || relativeX > chartWidth) {
-      setState(() => _selectedIndex = null);
-      return;
-    }
-
-    final index = (relativeX / groupWidth).floor().clamp(0, widget.points.length - 1);
-    setState(() => _selectedIndex = _selectedIndex == index ? null : index);
-  }
-
   @override
   Widget build(BuildContext context) {
+    if (widget.points.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Text('Chưa có dữ liệu 6 tháng gần đây',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+            textAlign: TextAlign.center),
+      );
+    }
+
     final maxValue = widget.points.fold<int>(0, (max, p) => math.max(max, math.max(p.income, p.expense)));
-    final hasData = widget.points.isNotEmpty && maxValue > 0;
+    final selected = _selectedIndex != null ? widget.points[_selectedIndex!] : null;
 
     return Column(
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            return GestureDetector(
-              onTapDown: (details) => _onTapDown(details, constraints),
-              child: SizedBox(
-                height: 190,
-                width: double.infinity,
-                child: CustomPaint(
-                  painter: _CashFlowPainter(
-                    points: widget.points,
-                    income: Theme.of(context).colorScheme.primary,
-                    expense: Theme.of(context).colorScheme.error,
-                    grid: Theme.of(context).colorScheme.outlineVariant,
-                    labels: Theme.of(context).colorScheme.onSurfaceVariant,
-                    maxValue: maxValue,
-                    selectedIndex: _selectedIndex,
-                    barAnimations: _reduceMotion
-                        ? List.generate(widget.points.length, (_) => const AlwaysStoppedAnimation(1.0))
-                        : _barAnimations,
-                    context: context,
+        SizedBox(
+          height: 190,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: widget.points.asMap().entries.map((entry) {
+              final i = entry.key;
+              final p = entry.value;
+              final isSelected = _selectedIndex == i;
+              final anim = CurvedAnimation(
+                  parent: _animController,
+                  curve: Interval((i * 0.1).clamp(0.0, 0.8), 1.0, curve: Curves.easeOutCubic));
+
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedIndex = isSelected ? null : i),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            _Bar(height: p.income, color: Theme.of(context).colorScheme.primary, maxValue: maxValue, animation: anim),
+                            const SizedBox(width: 2),
+                            _Bar(height: p.expense, color: Theme.of(context).colorScheme.error, maxValue: maxValue, animation: anim),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        p.month.replaceAll('月', ''),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            }).toList(),
+          ),
         ),
-        if (!hasData)
+        if (selected != null)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: .5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Text('Tháng: ${selected.month}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('Thu: ${formatVnd(selected.income)}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+                Text('Chi: ${formatVnd(selected.expense)}', style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _Bar extends StatelessWidget {
+  const _Bar({required this.height, required this.color, required this.maxValue, required this.animation});
+  final int height;
+  final Color color;
+  final int maxValue;
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) => FractionallySizedBox(
+            heightFactor: (maxValue == 0 ? 0 : (height / maxValue).clamp(0.0, 1.0)) * animation.value,
+            child: Container(width: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)), margin: const EdgeInsets.symmetric(horizontal: 1)),
+          ));
+}
+
+class ExpenseDonutChart extends StatefulWidget {
+  const ExpenseDonutChart({required this.slices, this.size = 130.0, super.key});
+  final List<ExpenseSlice> slices;
+  final double size;
+
+  @override
+  State<ExpenseDonutChart> createState() => _ExpenseDonutChartState();
+}
+
+class _ExpenseDonutChartState extends State<ExpenseDonutChart> {
+  int? _selectedSlice;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = widget.slices.fold<int>(0, (sum, slice) => sum + slice.amount);
+    final selected = _selectedSlice != null ? widget.slices[_selectedSlice!] : null;
+
+    return Column(
+      children: [
+        SizedBox(
+          width: widget.size,
+          height: widget.size,
+          child: GestureDetector(
+            onTapDown: (details) {
+              final renderBox = context.findRenderObject() as RenderBox?;
+              if (renderBox == null) return;
+              final local = renderBox.globalToLocal(details.globalPosition);
+              final center = Offset(widget.size / 2, widget.size / 2);
+              final dx = local.dx - center.dx;
+              final dy = local.dy - center.dy;
+              final angle = math.atan2(dy, dx);
+              final normalized = angle < -math.pi / 2 ? angle + 2 * math.pi : angle + math.pi / 2;
+              if (normalized < 0) return;
+
+              var accumulated = 0.0;
+              for (var i = 0; i < widget.slices.length; i++) {
+                final slice = widget.slices[i];
+                final sweep = 2 * math.pi * slice.amount / total;
+                if (accumulated <= normalized && normalized < accumulated + sweep) {
+                  setState(() => _selectedSlice = _selectedSlice == i ? null : i);
+                  break;
+                }
+                accumulated += sweep + .03;
+              }
+            },
+            child: CustomPaint(
+              painter: _DonutPainter(
+                slices: widget.slices,
+                total: total,
+                track: Theme.of(context).colorScheme.surfaceContainerHighest,
+                selectedIndex: _selectedSlice,
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      formatVnd(selected?.amount ?? total),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    Text(
+                      selected?.label ?? 'Tổng chi',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (selected != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              'Chưa có dữ liệu thu chi 6 tháng gần đây',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
-                  ),
+              '${selected.label}: ${formatVnd(selected.amount)} (${((selected.amount / total) * 100).round()}%)',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
           ),
@@ -140,201 +242,12 @@ class _CashFlowChartState extends State<CashFlowChart> with SingleTickerProvider
   }
 }
 
-class _CashFlowPainter extends CustomPainter {
-  const _CashFlowPainter({
-    required this.points,
-    required this.income,
-    required this.expense,
-    required this.grid,
-    required this.labels,
-    required this.maxValue,
-    required this.selectedIndex,
-    required this.barAnimations,
-    required this.context,
-  });
-
-  final List<CashFlowPoint> points;
-  final Color income;
-  final Color expense;
-  final Color grid;
-  final Color labels;
-  final int maxValue;
-  final int? selectedIndex;
-  final List<Animation<double>> barAnimations;
-  final BuildContext context;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const leftPadding = 38.0;
-    const rightPadding = 8.0;
-    const topPadding = 16.0;
-    const bottomPadding = 24.0;
-
-    final chartHeight = size.height - topPadding - bottomPadding;
-    final chartWidth = size.width - leftPadding - rightPadding;
-
-    final scale = maxValue == 0 ? 1.0 : maxValue.toDouble();
-    final linePaint = Paint()
-      ..color = grid.withValues(alpha: .5)
-      ..strokeWidth = 1;
-    final labelStyle = TextStyle(color: labels, fontSize: 10, fontWeight: FontWeight.w500);
-
-    // Y-axis grid lines and labels (3 steps: 0, max/2, max)
-    final ySteps = [1.0, 0.5, 0.0];
-    for (final step in ySteps) {
-      final y = topPadding + chartHeight * (1.0 - step);
-      canvas.drawLine(Offset(leftPadding, y), Offset(size.width - rightPadding, y), linePaint);
-
-      final val = maxValue * step;
-      final labelText = step == 0.0 ? '0' : compactVnd(val);
-      final tp = TextPainter(
-        text: TextSpan(text: labelText, style: labelStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(leftPadding - tp.width - 6, y - tp.height / 2));
-    }
-
-    if (points.isEmpty) return;
-
-    final groupWidth = chartWidth / points.length;
-    final barWidth = math.min(13.0, math.max(5.0, groupWidth * .24));
-
-    for (var i = 0; i < points.length; i++) {
-      final point = points[i];
-      final centerX = leftPadding + groupWidth * (i + .5);
-      final anim = barAnimations[i].value;
-
-      if (maxValue > 0) {
-        final incomeHeight = chartHeight * (point.income / scale) * anim;
-        final expenseHeight = chartHeight * (point.expense / scale) * anim;
-
-        if (point.income > 0) {
-          final incomeRect = Rect.fromLTWH(
-            centerX - barWidth - 1.5,
-            topPadding + chartHeight - incomeHeight,
-            barWidth,
-            incomeHeight,
-          );
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(incomeRect, const Radius.circular(5)),
-            Paint()..color = income,
-          );
-        }
-
-        if (point.expense > 0) {
-          final expenseRect = Rect.fromLTWH(
-            centerX + 1.5,
-            topPadding + chartHeight - expenseHeight,
-            barWidth,
-            expenseHeight,
-          );
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(expenseRect, const Radius.circular(5)),
-            Paint()..color = expense,
-          );
-        }
-      }
-
-      // Format month label e.g., "11月" -> "T11" or keep if clean
-      final monthClean = point.month.replaceAll('月', '');
-      final displayMonth = int.tryParse(monthClean) != null ? 'T$monthClean' : point.month;
-
-      final tp = TextPainter(
-        text: TextSpan(text: displayMonth, style: labelStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(centerX - tp.width / 2, size.height - bottomPadding + 6));
-
-      // Selected tooltip overlay
-      if (selectedIndex == i) {
-        final overlayPaint = Paint()..color = Theme.of(context).colorScheme.surface.withValues(alpha: .95);
-        final overlayRect = Rect.fromLTWH(
-          leftPadding,
-          topPadding,
-          chartWidth,
-          chartHeight,
-        );
-        canvas.drawRRect(RRect.fromRectAndRadius(overlayRect, const Radius.circular(8)), overlayPaint);
-
-        // Show values for selected month
-        final selectedPoint = points[i];
-        final valueStyle = TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.w600);
-        final incomeText = 'Thu: ${compactVnd(selectedPoint.income)}';
-        final expenseText = 'Chi: ${compactVnd(selectedPoint.expense)}';
-
-        final incomeTp = TextPainter(
-          text: TextSpan(text: incomeText, style: valueStyle.copyWith(color: income)),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        final expenseTp = TextPainter(
-          text: TextSpan(text: expenseText, style: valueStyle.copyWith(color: expense)),
-          textDirection: TextDirection.ltr,
-        )..layout();
-
-        final tooltipY = topPadding + 16;
-        final tooltipX = centerX - math.max(incomeTp.width, expenseTp.width) / 2;
-
-        incomeTp.paint(canvas, Offset(tooltipX, tooltipY));
-        expenseTp.paint(canvas, Offset(tooltipX, tooltipY + incomeTp.height + 4));
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CashFlowPainter oldDelegate) =>
-      points != oldDelegate.points ||
-      income != oldDelegate.income ||
-      expense != oldDelegate.expense ||
-      maxValue != oldDelegate.maxValue ||
-      selectedIndex != oldDelegate.selectedIndex ||
-      barAnimations != oldDelegate.barAnimations ||
-      context != oldDelegate.context;
-}
-
-class ExpenseDonutChart extends StatelessWidget {
-  const ExpenseDonutChart({required this.slices, this.size = 130.0, super.key});
-  final List<ExpenseSlice> slices;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final total = slices.fold<int>(0, (sum, slice) => sum + slice.amount);
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _DonutPainter(
-          slices: slices,
-          total: total,
-          track: Theme.of(context).colorScheme.surfaceContainerHighest,
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                slices.isEmpty ? '0' : '${slices.length}',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              Text(
-                'danh mục',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _DonutPainter extends CustomPainter {
-  const _DonutPainter({required this.slices, required this.total, required this.track});
+  const _DonutPainter({required this.slices, required this.total, required this.track, required this.selectedIndex});
   final List<ExpenseSlice> slices;
   final int total;
   final Color track;
+  final int? selectedIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -349,17 +262,20 @@ class _DonutPainter extends CustomPainter {
     if (total == 0) return;
 
     var start = -math.pi / 2;
-    for (final slice in slices) {
+    for (var i = 0; i < slices.length; i++) {
+      final slice = slices[i];
       final sweep = 2 * math.pi * slice.amount / total;
+      final isSelected = selectedIndex == i;
+
       canvas.drawArc(
         rect.deflate(strokeWidth / 2 + 2),
         start,
         sweep,
         false,
         Paint()
-          ..color = slice.color
+          ..color = slice.color.withValues(alpha: isSelected ? 1.0 : 0.6)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = strokeWidth
+          ..strokeWidth = isSelected ? strokeWidth + 2 : strokeWidth
           ..strokeCap = StrokeCap.round,
       );
       start += sweep + .03;
@@ -368,5 +284,5 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) =>
-      slices != oldDelegate.slices || total != oldDelegate.total || track != oldDelegate.track;
+      slices != oldDelegate.slices || total != oldDelegate.total || track != oldDelegate.track || selectedIndex != oldDelegate.selectedIndex;
 }

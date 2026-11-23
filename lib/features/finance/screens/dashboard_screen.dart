@@ -215,55 +215,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                   elevation: 0,
                   child: data.categories.isEmpty
                       ? const EmptyState(icon: Icons.pie_chart_outline_rounded, title: 'Chưa có khoản chi', message: 'Giao dịch chi tiêu sẽ được phân tích tại đây.')
-                      : LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isSmall = constraints.maxWidth < 340;
-                            if (isSmall) {
-                              return Column(
-                                children: [
-                                  ExpenseDonutChart(slices: data.categories, size: 110),
-                                  const SizedBox(height: 14),
-                                  ...data.categories.map((slice) => Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 5),
-                                        child: Row(
-                                          children: [
-                                            Container(width: 9, height: 9, decoration: BoxDecoration(color: slice.color, shape: BoxShape.circle)),
-                                            const SizedBox(width: 8),
-                                            Expanded(child: Text(slice.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall)),
-                                            Text(formatVnd(slice.amount), style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
-                                          ],
-                                        ),
-                                      )),
-                                ],
-                              );
-                            }
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                ExpenseDonutChart(slices: data.categories, size: 100),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: data.categories
-                                        .map((slice) => Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 5),
-                                              child: Row(
-                                                children: [
-                                                  Container(width: 9, height: 9, decoration: BoxDecoration(color: slice.color, shape: BoxShape.circle)),
-                                                  const SizedBox(width: 8),
-                                                  Expanded(child: Text(slice.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall)),
-                                                  Text(formatVnd(slice.amount), style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
-                                                ],
-                                              ),
-                                            ))
-                                        .toList(),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
+                      : ExpenseDonutChart(slices: data.categories),
                 ),
                 const SizedBox(height: 20),
                 SectionTitle('Giao dịch gần đây', action: 'Tất cả', onAction: () => widget.onNavigate('transactions')),
