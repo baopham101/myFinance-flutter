@@ -30,7 +30,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
     final saved = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, useSafeArea: true, builder: (_) => _BudgetEditor(repository: widget.repository, householdId: widget.householdId, categories: categories, budget: budget));
     if (saved == true && mounted) {
       final future = _load();
-      setState(() => _future = future);
+      setState(() { _future = future; });
       widget.onDataChanged?.call();
     }
   }
@@ -38,7 +38,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
   Future<void> _delete(FinanceBudget budget) async {
     final yes = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: const Text('Xóa ngân sách?'), content: Text('Ẩn ngân sách ${budget.categoryName}?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Xóa'))]));
     if (yes != true) return;
-    try { await widget.repository.deleteBudget(budget.id); if (mounted) { setState(() => _future = _load()); widget.onDataChanged?.call(); } }
+    try { await widget.repository.deleteBudget(budget.id); if (mounted) { setState(() { _future = _load(); }); widget.onDataChanged?.call(); } }
     catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString()))); }
   }
 
