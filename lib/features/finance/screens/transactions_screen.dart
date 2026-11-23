@@ -27,7 +27,7 @@ class TransactionsScreenState extends State<TransactionsScreen> {
   void dispose() { _search.dispose(); super.dispose(); }
 
   void refresh() {
-    if (mounted) setState(() => _future = _load());
+    if (mounted) setState(() { _future = _load(); });
   }
 
   Future<_TransactionData> _load() async {
@@ -50,7 +50,7 @@ class TransactionsScreenState extends State<TransactionsScreen> {
       useSafeArea: true,
       builder: (_) => TransactionEditorSheet(repository: widget.repository, wallets: data.wallets, categories: data.categories, householdId: widget.householdId, transaction: item),
     );
-    if (changed == true && mounted) { setState(() => _future = _load()); widget.onDataChanged?.call(); }
+    if (changed == true && mounted) { setState(() { _future = _load(); }); widget.onDataChanged?.call(); }
   }
 
   Future<void> _delete(FinanceTransaction item) async {
@@ -62,7 +62,7 @@ class TransactionsScreenState extends State<TransactionsScreen> {
     if (confirmed != true) return;
     try {
       await widget.repository.deleteTransaction(item.id);
-      if (mounted) { setState(() => _future = _load()); widget.onDataChanged?.call(); }
+      if (mounted) { setState(() { _future = _load(); }); widget.onDataChanged?.call(); }
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
     }

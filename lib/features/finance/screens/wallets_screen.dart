@@ -22,7 +22,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
   Future<void> _edit([FinanceWallet? wallet]) async {
     final saved = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, useSafeArea: true, builder: (_) => _WalletEditor(repository: widget.repository, householdId: widget.householdId, wallet: wallet));
     if (saved == true && mounted) {
-      setState(() => _future = widget.repository.wallets(widget.householdId));
+      setState(() { _future = widget.repository.wallets(widget.householdId); });
       widget.onDataChanged?.call();
     }
   }
@@ -30,7 +30,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
   Future<void> _delete(FinanceWallet wallet) async {
     final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: const Text('Xóa ví?'), content: Text('Xóa ví “${wallet.name}”? Ví có giao dịch không thể xóa.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Xóa'))]));
     if (confirmed != true) return;
-    try { await widget.repository.deleteWallet(wallet.id); if (mounted) { setState(() => _future = widget.repository.wallets(widget.householdId)); widget.onDataChanged?.call(); } }
+    try { await widget.repository.deleteWallet(wallet.id); if (mounted) { setState(() { _future = widget.repository.wallets(widget.householdId); }); widget.onDataChanged?.call(); } }
     catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString().replaceFirst('Exception: ', '')))); }
   }
 
