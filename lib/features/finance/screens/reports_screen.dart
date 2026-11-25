@@ -186,26 +186,37 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
     final endDate = DateTime.parse(end);
     final points = <CashFlowPoint>[];
 
-    // Group by month
+    // Build all months in the range first (so zero-data months appear)
+    var current = DateTime(startDate.year, startDate.month, 1);
+    final lastMonth = DateTime(endDate.year, endDate.month, 1);
+    final monthKeys = <String>[];
+    while (!current.isAfter(lastMonth)) {
+      final key = '${current.year}-${current.month.toString().padLeft(2, '0')}';
+      monthKeys.add(key);
+      points.add(CashFlowPoint(month: '${current.month}月', income: 0, expense: 0));
+      current = DateTime(current.year, current.month + 1, 1);
+    }
+
+    // Now aggregate actual data by month key
     final monthly = <String, CashFlowPoint>{};
     for (final row in rows) {
       final date = DateTime.parse(row.transactionDate);
       if (date.isBefore(startDate) || date.isAfter(endDate)) continue;
-      final monthKey = '${date.year}-${date.month.toString().padLeft(2, '0')}';
-      final existing = monthly[monthKey] ?? CashFlowPoint(month: monthKey, income: 0, expense: 0);
+      final key = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+      final existing = monthly[key] ?? CashFlowPoint(month: '${date.month}月', income: 0, expense: 0);
       if (row.type == TransactionType.income) {
-        monthly[monthKey] = CashFlowPoint(month: monthKey, income: existing.income + row.amount, expense: existing.expense);
+        monthly[key] = CashFlowPoint(month: existing.month, income: existing.income + row.amount, expense: existing.expense);
       } else if (row.type == TransactionType.expense) {
-        monthly[monthKey] = CashFlowPoint(month: monthKey, income: existing.income, expense: existing.expense + row.amount);
+        monthly[key] = CashFlowPoint(month: existing.month, income: existing.income, expense: existing.expense + row.amount);
       }
     }
 
-    // Sort months and limit to reasonable range
-    final sortedKeys = monthly.keys.toList()..sort();
-    for (final key in sortedKeys) {
-      final point = monthly[key]!;
-      final monthNum = int.parse(key.split('-')[1]);
-      points.add(CashFlowPoint(month: '$monthNum月', income: point.income, expense: point.expense));
+    // Merge data into points
+    for (var i = 0; i < monthKeys.length; i++) {
+      final key = monthKeys[i];
+      if (monthly.containsKey(key)) {
+        points[i] = monthly[key]!;
+      }
     }
     return points;
   }

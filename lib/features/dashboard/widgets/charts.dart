@@ -59,79 +59,170 @@ class _CashFlowChartState extends State<CashFlowChart> with SingleTickerProvider
     }
   }
 
+  int _calculateYMax(int rawMax) {
+    if (rawMax <= 0) return 100000;
+    // Give ~25% headroom
+    int target = (rawMax * 1.25).ceil();
+    if (target < 100000) return 100000;
+    if (target < 1000000) {
+      return ((target + 49999) ~/ 50000) * 50000;
+    } else if (target < 10000000) {
+      return ((target + 499999) ~/ 500000) * 500000;
+    } else {
+      return ((target + 4999999) ~/ 5000000) * 5000000;
+    }
+  }
+
+  String _cleanMonthLabel(String raw) {
+    final clean = raw.replaceAll('月', '').replaceAll('T', '').trim();
+    return clean;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.points.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Text('Chưa có dữ liệu 6 tháng gần đây',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-            textAlign: TextAlign.center),
+        child: Text(
+          'Chưa có dữ liệu 6 tháng gần đây',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+          textAlign: TextAlign.center,
+        ),
       );
     }
 
-    final maxValue = widget.points.fold<int>(0, (max, p) => math.max(max, math.max(p.income, p.expense)));
-    final selected = _selectedIndex != null ? widget.points[_selectedIndex!] : null;
+    final rawMax = widget.points.fold<int>(0, (max, p) => math.max(max, math.max(p.income, p.expense)));
+    final yMax = _calculateYMax(rawMax);
+    final selected = _selectedIndex != null && _selectedIndex! < widget.points.length ? widget.points[_selectedIndex!] : null;
+
+    final theme = Theme.of(context);
+    final gridColor = theme.colorScheme.outlineVariant.withValues(alpha: .3);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: 190,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: widget.points.asMap().entries.map((entry) {
-              final i = entry.key;
-              final p = entry.value;
-              final isSelected = _selectedIndex == i;
-              final anim = CurvedAnimation(
-                  parent: _animController,
-                  curve: Interval((i * 0.1).clamp(0.0, 0.8), 1.0, curve: Curves.easeOutCubic));
+        Stack(
+          children: [
+            // Background horizontal gridlines
+            Positioned.fill(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(height: 1, color: gridColor),
+                  Container(height: 1, color: gridColor),
+                  Container(height: 1, color: gridColor),
+                  Container(height: 1.5, color: theme.colorScheme.outline.withValues(alpha: .5)), // Baseline
+                ],
+              ),
+            ),
+            // Bars & X-axis Labels
+            SizedBox(
+              height: 180,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: widget.points.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final p = entry.value;
+                  final isSelected = _selectedIndex == i;
+                  final anim = CurvedAnimation(
+                    parent: _animController,
+                    curve: Interval((i * 0.1).clamp(0.0, 0.8), 1.0, curve: Curves.easeOutCubic),
+                  );
 
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedIndex = isSelected ? null : i),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            _Bar(height: p.income, color: Theme.of(context).colorScheme.primary, maxValue: maxValue, animation: anim),
-                            const SizedBox(width: 2),
-                            _Bar(height: p.expense, color: Theme.of(context).colorScheme.error, maxValue: maxValue, animation: anim),
-                          ],
+                  return Expanded(
+                    child: Semantics(
+                      label: 'Tháng ${_cleanMonthLabel(p.month)}: Thu nhập ${formatVnd(p.income)}, Chi tiêu ${formatVnd(p.expense)}',
+                      button: true,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => setState(() => _selectedIndex = isSelected ? null : i),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            color: isSelected ? theme.colorScheme.primaryContainer.withValues(alpha: .2) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      _Bar(
+                                        height: p.income,
+                                        color: theme.colorScheme.primary,
+                                        maxValue: yMax,
+                                        animation: anim,
+                                      ),
+                                      const SizedBox(width: 3),
+                                      _Bar(
+                                        height: p.expense,
+                                        color: theme.colorScheme.error,
+                                        maxValue: yMax,
+                                        animation: anim,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _cleanMonthLabel(p.month),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                  color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        p.month.replaceAll('月', ''),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (selected != null)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: .5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: .4)),
+            ),
+            child: Wrap(
+              alignment: WrapAlignment.spaceAround,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 6,
+              children: [
+                Text(
+                  'Tháng ${_cleanMonthLabel(selected.month)}',
+                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  'Thu: ${formatVnd(selected.income)}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              );
-            }).toList(),
-          ),
-        ),
-        if (selected != null)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: .5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Text('Tháng: ${selected.month}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('Thu: ${formatVnd(selected.income)}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
-                Text('Chi: ${formatVnd(selected.expense)}', style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.bold)),
+                Text(
+                  'Chi: ${formatVnd(selected.expense)}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
@@ -141,19 +232,38 @@ class _CashFlowChartState extends State<CashFlowChart> with SingleTickerProvider
 }
 
 class _Bar extends StatelessWidget {
-  const _Bar({required this.height, required this.color, required this.maxValue, required this.animation});
+  const _Bar({
+    required this.height,
+    required this.color,
+    required this.maxValue,
+    required this.animation,
+  });
+
   final int height;
   final Color color;
   final int maxValue;
   final Animation<double> animation;
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
+  Widget build(BuildContext context) {
+    final double factor = maxValue == 0 ? 0.0 : (height / maxValue).clamp(0.0, 1.0);
+    return AnimatedBuilder(
       animation: animation,
-      builder: (context, _) => FractionallySizedBox(
-            heightFactor: (maxValue == 0 ? 0 : (height / maxValue).clamp(0.0, 1.0)) * animation.value,
-            child: Container(width: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)), margin: const EdgeInsets.symmetric(horizontal: 1)),
-          ));
+      builder: (context, _) {
+        final currentFactor = factor * animation.value;
+        return FractionallySizedBox(
+          heightFactor: currentFactor <= 0 ? 0.02 : currentFactor, // Min 2% indicator for non-zero or baseline
+          child: Container(
+            width: 8,
+            decoration: BoxDecoration(
+              color: height == 0 ? color.withValues(alpha: .2) : color,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class ExpenseDonutChart extends StatefulWidget {
@@ -171,7 +281,7 @@ class _ExpenseDonutChartState extends State<ExpenseDonutChart> {
   @override
   Widget build(BuildContext context) {
     final total = widget.slices.fold<int>(0, (sum, slice) => sum + slice.amount);
-    final selected = _selectedSlice != null ? widget.slices[_selectedSlice!] : null;
+    final selected = _selectedSlice != null && _selectedSlice! < widget.slices.length ? widget.slices[_selectedSlice!] : null;
 
     return Column(
       children: [
@@ -193,7 +303,7 @@ class _ExpenseDonutChartState extends State<ExpenseDonutChart> {
               var accumulated = 0.0;
               for (var i = 0; i < widget.slices.length; i++) {
                 final slice = widget.slices[i];
-                final sweep = 2 * math.pi * slice.amount / total;
+                final sweep = 2 * math.pi * slice.amount / (total == 0 ? 1 : total);
                 if (accumulated <= normalized && normalized < accumulated + sweep) {
                   setState(() => _selectedSlice = _selectedSlice == i ? null : i);
                   break;
@@ -232,7 +342,7 @@ class _ExpenseDonutChartState extends State<ExpenseDonutChart> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              '${selected.label}: ${formatVnd(selected.amount)} (${((selected.amount / total) * 100).round()}%)',
+              '${selected.label}: ${formatVnd(selected.amount)} (${total == 0 ? 0 : ((selected.amount / total) * 100).round()}%)',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
@@ -273,9 +383,9 @@ class _DonutPainter extends CustomPainter {
         sweep,
         false,
         Paint()
-          ..color = slice.color.withValues(alpha: isSelected ? 1.0 : 0.6)
+          ..color = slice.color.withValues(alpha: isSelected ? 1.0 : 0.7)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = isSelected ? strokeWidth + 2 : strokeWidth
+          ..strokeWidth = isSelected ? strokeWidth + 3 : strokeWidth
           ..strokeCap = StrokeCap.round,
       );
       start += sweep + .03;
