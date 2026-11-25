@@ -289,6 +289,7 @@ class _ExpenseDonutChartState extends State<ExpenseDonutChart> {
           width: widget.size,
           height: widget.size,
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTapDown: (details) {
               final renderBox = context.findRenderObject() as RenderBox?;
               if (renderBox == null) return;

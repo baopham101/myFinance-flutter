@@ -22,13 +22,29 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   bool _showBalance = true;
   late final AnimationController _balanceController;
   late final AnimationController _summaryController;
+  late DateTime _start;
+  late DateTime _end;
+  late final AnimationController _chartAnimController;
 
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _start = DateTime(now.year, now.month - 5, 1); // 6 months ago
+    _end = now;
     _future = _load();
     _balanceController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     _summaryController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _chartAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final media = MediaQuery.of(context);
+      if (!media.disableAnimations) {
+        _chartAnimController.forward();
+      } else {
+        _chartAnimController.value = 1.0;
+      }
+    });
   }
 
   @override
@@ -47,6 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   void dispose() {
     _balanceController.dispose();
     _summaryController.dispose();
+    _chartAnimController.dispose();
     super.dispose();
   }
 
@@ -54,6 +71,23 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
         _showBalance = !_showBalance;
         _showBalance ? _balanceController.forward() : _balanceController.reverse();
       });
+
+  String _date(DateTime value) => '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+
+  Future<void> _pick(bool start) async {
+    final selected = await showDatePicker(context: context, initialDate: start ? _start : _end, firstDate: DateTime(2000), lastDate: DateTime.now());
+    if (selected != null) {
+      setState(() {
+        if (start) {
+          _start = selected;
+        } else {
+          _end = selected;
+        }
+        _chartAnimController.forward(from: 0);
+        _future = _load(); // Reload data with new date range
+      });
+    }
+  }
 
   @override
   void didUpdateWidget(covariant DashboardScreen oldWidget) {
@@ -71,23 +105,17 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
     ]);
     final wallets = values[0] as List<FinanceWallet>;
     final transactions = values[1] as List<FinanceTransaction>;
-    final now = DateTime.now();
-    final currentMonth = transactions.where((item) => item.transactionDate.startsWith('${now.year}-${now.month.toString().padLeft(2, '0')}')).toList();
-    final income = currentMonth.where((item) => item.type == TransactionType.income).fold<int>(0, (sum, item) => sum + item.amount);
-    final expense = currentMonth.where((item) => item.type == TransactionType.expense).fold<int>(0, (sum, item) => sum + item.amount);
-    final flow = <CashFlowPoint>[];
-    for (var back = 5; back >= 0; back--) {
-      final date = DateTime(now.year, now.month - back, 1);
-      final prefix = '${date.year}-${date.month.toString().padLeft(2, '0')}';
-      final rows = transactions.where((item) => item.transactionDate.startsWith(prefix));
-      flow.add(CashFlowPoint(
-        month: '${date.month}月',
-        income: rows.where((item) => item.type == TransactionType.income).fold<int>(0, (sum, item) => sum + item.amount),
-        expense: rows.where((item) => item.type == TransactionType.expense).fold<int>(0, (sum, item) => sum + item.amount),
-      ));
-    }
+
+    final start = _date(_start);
+    final end = _date(_end);
+    final rows = transactions.where((item) => item.transactionDate.compareTo(start) >= 0 && item.transactionDate.compareTo(end) <= 0).toList();
+    final income = rows.where((item) => item.type == TransactionType.income).fold<int>(0, (sum, item) => sum + item.amount);
+    final expense = rows.where((item) => item.type == TransactionType.expense).fold<int>(0, (sum, item) => sum + item.amount);
+
+    final flow = _buildTrendPoints(rows, start, end);
+
     final categoryTotals = <String, ExpenseSlice>{};
-    for (final item in currentMonth.where((item) => item.type == TransactionType.expense)) {
+    for (final item in rows.where((item) => item.type == TransactionType.expense)) {
       final key = item.categoryName ?? 'Khác';
       final previous = categoryTotals[key];
       categoryTotals[key] = ExpenseSlice(label: key, amount: (previous?.amount ?? 0) + item.amount, color: _colorFromHex(item.categoryColor));
@@ -97,10 +125,50 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
       balance: wallets.fold<int>(0, (sum, wallet) => sum + wallet.balance),
       income: income,
       expense: expense,
-      transactions: transactions.take(5).toList(),
+      transactions: rows.take(5).toList(),
       flow: flow,
       categories: categories.take(5).toList(),
     );
+  }
+
+  List<CashFlowPoint> _buildTrendPoints(List<FinanceTransaction> rows, String start, String end) {
+    final startDate = DateTime.parse(start);
+    final endDate = DateTime.parse(end);
+    final points = <CashFlowPoint>[];
+
+    // Build all months in the range first (so zero-data months appear)
+    var current = DateTime(startDate.year, startDate.month, 1);
+    final lastMonth = DateTime(endDate.year, endDate.month, 1);
+    final monthKeys = <String>[];
+    while (!current.isAfter(lastMonth)) {
+      final key = '${current.year}-${current.month.toString().padLeft(2, '0')}';
+      monthKeys.add(key);
+      points.add(CashFlowPoint(month: '${current.month}月', income: 0, expense: 0));
+      current = DateTime(current.year, current.month + 1, 1);
+    }
+
+    // Now aggregate actual data by month key
+    final monthly = <String, CashFlowPoint>{};
+    for (final row in rows) {
+      final date = DateTime.parse(row.transactionDate);
+      if (date.isBefore(startDate) || date.isAfter(endDate)) continue;
+      final key = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+      final existing = monthly[key] ?? CashFlowPoint(month: '${date.month}月', income: 0, expense: 0);
+      if (row.type == TransactionType.income) {
+        monthly[key] = CashFlowPoint(month: existing.month, income: existing.income + row.amount, expense: existing.expense);
+      } else if (row.type == TransactionType.expense) {
+        monthly[key] = CashFlowPoint(month: existing.month, income: existing.income, expense: existing.expense + row.amount);
+      }
+    }
+
+    // Merge data into points
+    for (var i = 0; i < monthKeys.length; i++) {
+      final key = monthKeys[i];
+      if (monthly.containsKey(key)) {
+        points[i] = monthly[key]!;
+      }
+    }
+    return points;
   }
 
   @override
@@ -129,7 +197,11 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
                       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('Tổng quan', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
                         const SizedBox(height: 4),
-                        Text('Dòng tiền của bạn trong tháng này', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
+                        Row(children: [
+                          Expanded(child: OutlinedButton.icon(onPressed: () => _pick(true), icon: const Icon(Icons.calendar_today_outlined, size: 18), label: Text(_date(_start)))),
+                          const SizedBox(width: 8),
+                          Expanded(child: OutlinedButton.icon(onPressed: () => _pick(false), icon: const Icon(Icons.event_outlined, size: 18), label: Text(_date(_end)))),
+                        ]),
                       ]),
                       FilledButton.icon(
                         onPressed: widget.onAddTransaction,

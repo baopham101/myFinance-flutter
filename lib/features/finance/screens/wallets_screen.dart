@@ -79,18 +79,35 @@ class _WalletsScreenState extends State<WalletsScreen> {
                   const SizedBox(height: 2),
                   Text(_walletTypeLabel(wallet.type), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 ])),
-                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text(formatVnd(wallet.balance), style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 15)),
-                  PopupMenuButton<String>(
-                    tooltip: 'Hành động',
-                    onSelected: (value) => value == 'edit' ? _edit(wallet) : _delete(wallet),
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Sửa ví')),
-                      PopupMenuItem(value: 'delete', child: Text('Xóa ví')),
+                const SizedBox(width: 8),
+                // Wrap the balance + menu row in Flexible so it gets bounded constraints
+                Flexible(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          formatVnd(wallet.balance),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 15),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      PopupMenuButton<String>(
+                        tooltip: 'Hành động',
+                        onSelected: (value) => value == 'edit' ? _edit(wallet) : _delete(wallet),
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'edit', child: Text('Sửa ví')),
+                          PopupMenuItem(value: 'delete', child: Text('Xóa ví')),
+                        ],
+                        icon: const Icon(Icons.more_vert_rounded, size: 20),
+                      ),
                     ],
-                    icon: const Icon(Icons.more_vert_rounded, size: 20),
                   ),
-                ]),
+                ),
               ]),
             ))),
           ]);
@@ -114,38 +131,50 @@ class _WalletEditorState extends State<_WalletEditor> {
   late WalletType _type;
   bool _saving = false;
   String? _error;
+  late bool _isEditing;
   @override
-  void initState() { super.initState(); _name = TextEditingController(text: widget.wallet?.name ?? ''); _opening = TextEditingController(text: widget.wallet?.openingBalance.toString() ?? '0'); _type = widget.wallet?.type ?? WalletType.cash; }
+  void initState() { super.initState(); _name = TextEditingController(text: widget.wallet?.name ?? ''); _opening = TextEditingController(text: widget.wallet?.openingBalance.toString() ?? '0'); _type = widget.wallet?.type ?? WalletType.cash; _isEditing = widget.wallet != null; }
   @override
   void dispose() { _name.dispose(); _opening.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-        child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(18, 16, 18, 22), child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(widget.wallet == null ? 'Tạo ví' : 'Sửa ví', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 16),
-          TextFormField(controller: _name, autofocus: true, maxLength: 80, decoration: const InputDecoration(labelText: 'Tên ví', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (value) => value == null || value.trim().isEmpty ? 'Nhập tên ví.' : null),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<WalletType>(initialValue: _type, decoration: const InputDecoration(labelText: 'Loại ví'), items: WalletType.values.map((item) => DropdownMenuItem(value: item, child: Text(_walletTypeLabel(item)))).toList(), onChanged: (value) => setState(() => _type = value!)),
-          if (widget.wallet == null) ...[
-            const SizedBox(height: 12),
-            TextFormField(controller: _opening, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Số dư ban đầu (VND)', prefixIcon: Icon(Icons.payments_outlined)), validator: (value) { try { parseVnd(value ?? '', allowZero: true); return null; } on FormatException catch (error) { return error.message; } }),
-          ] else ...[
-            const SizedBox(height: 8),
-            Text('Số dư ban đầu được khóa sau khi tạo ví để giữ lịch sử nhất quán.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          ],
-          if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
-          const SizedBox(height: 16),
-          FilledButton(onPressed: _saving ? null : _submit, child: _saving ? const CircularProgressIndicator() : const Text('Lưu ví')),
-        ]))),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
+          child: Form(
+            key: _form,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(widget.wallet == null ? 'Tạo ví' : 'Sửa ví', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 16),
+                TextFormField(controller: _name, autofocus: true, maxLength: 80, decoration: const InputDecoration(labelText: 'Tên ví', prefixIcon: Icon(Icons.account_balance_wallet_outlined)), validator: (value) => value == null || value.trim().isEmpty ? 'Nhập tên ví.' : null),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<WalletType>(initialValue: _type, decoration: const InputDecoration(labelText: 'Loại ví'), items: WalletType.values.map((item) => DropdownMenuItem(value: item, child: Text(_walletTypeLabel(item)))).toList(), onChanged: (value) => setState(() => _type = value!)),
+                const SizedBox(height: 12),
+                TextFormField(controller: _opening, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: _isEditing ? 'Số dư mở đầu (VND)' : 'Số dư ban đầu (VND)', prefixIcon: const Icon(Icons.payments_outlined)), validator: (value) { try { parseVnd(value ?? '', allowZero: true); return null; } on FormatException catch (error) { return error.message; } }),
+                if (_isEditing) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Số dư hiện tại sẽ được điều chỉnh theo thay đổi này.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                ],
+                if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+                const SizedBox(height: 20),
+                FilledButton(onPressed: _saving ? null : _submit, child: _saving ? const CircularProgressIndicator() : const Text('Lưu ví')),
+              ],
+            ),
+          ),
+        ),
       );
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
     setState(() { _saving = true; _error = null; });
     try {
-      await widget.repository.saveWallet(id: widget.wallet?.id, name: _name.text.trim(), type: _type, openingBalance: widget.wallet == null ? parseVnd(_opening.text, allowZero: true) : null, householdId: widget.householdId);
+      await widget.repository.saveWallet(id: widget.wallet?.id, name: _name.text.trim(), type: _type, openingBalance: parseVnd(_opening.text, allowZero: true), householdId: widget.householdId);
       if (mounted) Navigator.pop(context, true);
     } catch (error) { if (mounted) setState(() { _saving = false; _error = error.toString().replaceFirst('Exception: ', ''); }); }
   }

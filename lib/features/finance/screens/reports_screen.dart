@@ -89,7 +89,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
 
             // Monthly trend chart
             if (trendPoints.isNotEmpty) ...[
-              SectionTitle('Xu hướng thu chi'),
+              const SectionTitle('Xu hướng thu chi'),
               AppCard(
                 elevation: 0,
                 child: Column(
