@@ -73,17 +73,22 @@ class FinanceRepository {
   }
 
   Future<void> saveWallet({String? id, required String name, required WalletType type, int? openingBalance, String? householdId}) async {
-    final data = {
-      'name': name,
-      'type': type.databaseValue,
-      'opening_balance': openingBalance ?? 0,
-      'currency': 'VND',
-      'household_id': householdId,
-    };
     if (id == null) {
+      final data = {
+        'name': name,
+        'type': type.databaseValue,
+        'opening_balance': openingBalance ?? 0,
+        'currency': 'VND',
+        'household_id': householdId,
+      };
       await client.from('wallets').insert(data);
     } else {
-      await client.from('wallets').update(data).eq('id', id);
+      await client.from('wallets').update({
+        'name': name,
+        'type': type.databaseValue,
+        'currency': 'VND',
+        'household_id': householdId,
+      }).eq('id', id);
     }
   }
 

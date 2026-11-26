@@ -153,14 +153,18 @@ class _WalletEditorState extends State<_WalletEditor> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<WalletType>(initialValue: _type, decoration: const InputDecoration(labelText: 'Loại ví'), items: WalletType.values.map((item) => DropdownMenuItem(value: item, child: Text(_walletTypeLabel(item)))).toList(), onChanged: (value) => setState(() => _type = value!)),
                 const SizedBox(height: 12),
-                TextFormField(controller: _opening, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: _isEditing ? 'Số dư mở đầu (VND)' : 'Số dư ban đầu (VND)', prefixIcon: const Icon(Icons.payments_outlined)), validator: (value) { try { parseVnd(value ?? '', allowZero: true); return null; } on FormatException catch (error) { return error.message; } }),
-                if (_isEditing) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Số dư hiện tại sẽ được điều chỉnh theo thay đổi này.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                TextFormField(
+                  controller: _opening,
+                  enabled: !_isEditing,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Số dư ban đầu (VND)',
+                    prefixIcon: const Icon(Icons.payments_outlined),
+                    helperText: _isEditing ? 'Số dư ban đầu không thể thay đổi. Dùng giao dịch để điều chỉnh.' : null,
+                    helperMaxLines: 2,
                   ),
-                ],
+                  validator: (value) { try { parseVnd(value ?? '', allowZero: true); return null; } on FormatException catch (error) { return error.message; } },
+                ),
                 if (_error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
                 const SizedBox(height: 20),
                 FilledButton(onPressed: _saving ? null : _submit, child: _saving ? const CircularProgressIndicator() : const Text('Lưu ví')),
@@ -174,7 +178,13 @@ class _WalletEditorState extends State<_WalletEditor> {
     if (!_form.currentState!.validate()) return;
     setState(() { _saving = true; _error = null; });
     try {
-      await widget.repository.saveWallet(id: widget.wallet?.id, name: _name.text.trim(), type: _type, openingBalance: parseVnd(_opening.text, allowZero: true), householdId: widget.householdId);
+      if (widget.wallet != null) {
+        // Editing existing wallet - don't pass openingBalance
+        await widget.repository.saveWallet(id: widget.wallet?.id, name: _name.text.trim(), type: _type, householdId: widget.householdId);
+      } else {
+        // Creating new wallet - pass openingBalance
+        await widget.repository.saveWallet(name: _name.text.trim(), type: _type, openingBalance: parseVnd(_opening.text, allowZero: true), householdId: widget.householdId);
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (error) { if (mounted) setState(() { _saving = false; _error = error.toString().replaceFirst('Exception: ', ''); }); }
   }
